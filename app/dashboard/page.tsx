@@ -10,6 +10,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/logout-button";
+import Link from "next/link";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -20,6 +21,48 @@ export default async function DashboardPage() {
   // This shouldn't happen because middleware redirects, but just in case
   if (!user) {
     redirect("/auth/login");
+  }
+
+  // Check if user has completed onboarding by seeing if profile exists with required fields
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("full_name, university_name, major")
+    .eq("id", user.id)
+    .single();
+
+  // If profile doesn't exist or is missing required fields, show onboarding prompt
+  if (
+    !profile ||
+    !profile.full_name ||
+    !profile.university_name ||
+    !profile.major
+  ) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-8">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="text-2xl">Welcome to Dorm Match!</CardTitle>
+            <CardDescription>
+              Complete your profile to start finding compatible roommates
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600">
+              We need a bit more information to help you find the perfect
+              roommate match. This will only take a few minutes!
+            </p>
+            <Link href="/onboarding">
+              <Button className="w-full" size="lg">
+                Start Profile Setup
+              </Button>
+            </Link>
+            <div className="pt-4 border-t">
+              <LogoutButton />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   // Get initials for avatar fallback
