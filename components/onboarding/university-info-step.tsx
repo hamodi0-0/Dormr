@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { set, z } from "zod";
 import { useOnboardingStore } from "@/lib/stores/onboarding-store";
+import { COMMON_MAJORS } from "@/lib/constants";
 import {
   Form,
   FormControl,
@@ -43,6 +44,14 @@ export function UniversityInfoStep() {
   const { universities, isLoading, searchUniversities } = useUniversitySearch();
   const [showUniversities, setShowUniversities] = useState(false);
   const [searchQuery, setSearchQuery] = useState(data.university_name || "");
+  const [majorSearchQuery, setMajorSearchQuery] = useState(data.major || "");
+  const [showMajors, setShowMajors] = useState(false);
+
+  const filteredMajors = majorSearchQuery
+    ? COMMON_MAJORS.filter((major) =>
+        major.toLowerCase().includes(majorSearchQuery.toLowerCase()),
+      )
+    : [];
 
   const form = useForm<UniversityInfoForm>({
     resolver: zodResolver(universityInfoSchema),
@@ -93,6 +102,12 @@ export function UniversityInfoStep() {
                     onChange={(e) => {
                       handleUniversitySearch(e.target.value);
                       field.onChange(e.target.value);
+                    }}
+                    // if user clicks enter the first university in the list should be selected
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && universities.length > 0) {
+                        selectUniversity(universities[0].name);
+                      }
                     }}
                     onFocus={() =>
                       searchQuery.length >= 2 && setShowUniversities(true)
@@ -156,7 +171,49 @@ export function UniversityInfoStep() {
             <FormItem>
               <FormLabel>Major / Field of Study *</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., Computer Science" {...field} />
+                <div className="relative">
+                  <Input
+                    placeholder="Search for your major..."
+                    value={majorSearchQuery}
+                    onChange={(e) => {
+                      setMajorSearchQuery(e.target.value);
+                      field.onChange(e.target.value);
+                      if (e.target.value.length >= 1) {
+                        setShowMajors(true);
+                      } else {
+                        setShowMajors(false);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      // if user clicks enter the first major in the list should be selected
+                      if (e.key === "Enter" && filteredMajors.length > 0) {
+                        setMajorSearchQuery(filteredMajors[0]);
+                        form.setValue("major", filteredMajors[0]);
+                        setShowMajors(false);
+                      }
+                    }}
+                    onFocus={() =>
+                      majorSearchQuery.length >= 1 && setShowMajors(true)
+                    }
+                  />
+                  {showMajors && filteredMajors.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
+                      {filteredMajors.map((major, idx) => (
+                        <div
+                          key={idx}
+                          className="px-3 py-2 hover:bg-accent cursor-pointer text-sm"
+                          onClick={() => {
+                            setMajorSearchQuery(major);
+                            form.setValue("major", major);
+                            setShowMajors(false);
+                          }}
+                        >
+                          {major}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
