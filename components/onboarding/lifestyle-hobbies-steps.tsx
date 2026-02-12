@@ -12,6 +12,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -307,16 +308,18 @@ export function BioStep() {
   });
 
   useEffect(() => {
-    // Seed store with the form's default values so defaults count as "filled"
+    // Seed store with the form's default values
     const initial = form.getValues();
     updateData({
       bio: initial.bio,
-      hobbies: initial.hobbies?.filter((h): h is string => h !== undefined) || [],
+      hobbies:
+        initial.hobbies?.filter((h): h is string => h !== undefined) || [],
     });
 
     const subscription = form.watch((value) => {
       updateData({
-        bio: value.bio,
+        // get first 100 words of the bio
+        bio: value.bio?.split(" ").slice(0, 100).join(" ") || "",
         hobbies:
           value.hobbies?.filter((h): h is string => h !== undefined) || [],
       });
@@ -324,19 +327,30 @@ export function BioStep() {
     return () => subscription.unsubscribe();
   }, [form, updateData]);
 
-  const toggleHobby = (hobby: string) => {
-    const newHobbies = selectedHobbies.includes(hobby)
-      ? selectedHobbies.filter((h) => h !== hobby)
-      : [...selectedHobbies, hobby];
+  const addHobby = (hobby: string) => {
+    if (!selectedHobbies.includes(hobby)) {
+      const newHobbies = [...selectedHobbies, hobby];
+      setSelectedHobbies(newHobbies);
+      form.setValue("hobbies", newHobbies);
+      updateData({ hobbies: newHobbies });
+    }
+  };
 
+  const removeHobby = (hobby: string) => {
+    const newHobbies = selectedHobbies.filter((h) => h !== hobby);
     setSelectedHobbies(newHobbies);
     form.setValue("hobbies", newHobbies);
     updateData({ hobbies: newHobbies });
   };
 
+  // Filter out already selected hobbies from available list
+  const availableHobbies = COMMON_HOBBIES.filter(
+    (hobby) => !selectedHobbies.includes(hobby),
+  );
+
   return (
     <Form {...form}>
-      <form className="space-y-6">
+      <form className="space-y-5 ">
         <FormField
           control={form.control}
           name="bio"
@@ -346,40 +360,63 @@ export function BioStep() {
               <FormControl>
                 <Textarea
                   placeholder="Tell potential roommates about yourself... your interests, what you're looking for in a roommate, etc."
-                  className="min-h-24 resize-none"
+                  className="min-h-24 resize-none max-w-152.5"
                   {...field}
                 />
               </FormControl>
               <FormDescription>
-                A good bio helps you find more compatible matches
+                A good bio helps you find more compatible matches (max 100
+                words)
               </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <div className="space-y-3">
+        <div className="space-y-3 w-full">
           <Label>Hobbies & Interests (Optional)</Label>
-          <div className="flex flex-wrap gap-2 p-3 border rounded-md min-h-[100px] max-h-[200px] overflow-y-auto">
-            {COMMON_HOBBIES.map((hobby) => (
-              <button
-                key={hobby}
-                type="button"
-                onClick={() => toggleHobby(hobby)}
-                className={cn(
-                  "px-3 py-1 rounded-full text-sm transition-colors border",
-                  selectedHobbies.includes(hobby)
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background hover:bg-accent border-input",
-                )}
-              >
-                {hobby}
-              </button>
-            ))}
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Select hobbies that interest you ({selectedHobbies.length} selected)
-          </p>
+
+          {/* Your Selected Hobbies */}
+          {selectedHobbies.length > 0 && (
+            <div className="space-y-2 max-w-152.5">
+              <p className="text-sm font-medium">Your Hobbies:</p>
+              <div className="flex flex-wrap gap-2 w-full">
+                {selectedHobbies.map((hobby) => (
+                  <button
+                    key={hobby}
+                    type="button"
+                    onClick={() => removeHobby(hobby)}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-primary text-primary-foreground border border-primary hover:bg-primary/90 transition-colors shrink-0"
+                  >
+                    {hobby}
+                    <X className="h-3 w-3" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Available Hobbies */}
+          {availableHobbies.length > 0 && (
+            <div className="space-y-2 max-w-152.5">
+              <p className="text-sm text-muted-foreground">
+                Select hobbies that interest you ({selectedHobbies.length}{" "}
+                selected)
+              </p>
+              <div className="flex flex-wrap gap-2 w-full">
+                {availableHobbies.map((hobby) => (
+                  <button
+                    key={hobby}
+                    type="button"
+                    onClick={() => addHobby(hobby)}
+                    className="px-3 py-1 rounded-full text-sm bg-background hover:bg-accent border border-input transition-colors shrink-0"
+                  >
+                    {hobby}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </form>
     </Form>
