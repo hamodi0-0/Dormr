@@ -26,19 +26,14 @@ export default async function DashboardPage() {
   // Check if user has completed onboarding by seeing if profile exists with required fields
   const { data: profile } = await supabase
     .from("user_profiles")
-    .select("full_name, university_name, major")
+    .select("is_onboarded")
     .eq("id", user.id)
     .single();
 
   // If profile doesn't exist or is missing required fields, show onboarding prompt
-  if (
-    !profile ||
-    !profile.full_name ||
-    !profile.university_name ||
-    !profile.major
-  ) {
+  if (!profile?.is_onboarded) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-8">
+      <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-8">
         <Card className="max-w-md">
           <CardHeader>
             <CardTitle className="text-2xl">Welcome to Dorm Match!</CardTitle>

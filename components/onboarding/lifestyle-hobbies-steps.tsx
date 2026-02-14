@@ -23,7 +23,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { COMMON_HOBBIES } from "@/lib/constants";
-import { cn } from "@/lib/utils";
 
 // Lifestyle Step - Compatibility preferences
 export function LifestyleStep() {
@@ -44,6 +43,7 @@ export function LifestyleStep() {
     updateData(form.getValues());
 
     const subscription = form.watch((value) => {
+      //learn about .watch() in react-hook-form
       updateData(value);
     });
     return () => subscription.unsubscribe();

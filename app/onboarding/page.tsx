@@ -151,7 +151,7 @@ export default function OnboardingPage() {
 
           <CardContent className="space-y-6">
             {/* Step Content with Sliding Animation */}
-            <div className="relative overflow-hidden min-h-[320px]">
+            <div className="relative overflow-hidden min-h-80">
               <div
                 className="transition-transform duration-300 ease-out flex"
                 style={{
@@ -159,7 +159,7 @@ export default function OnboardingPage() {
                 }}
               >
                 {STEPS.map((step) => (
-                  <div key={step.id} className="min-w-full flex-shrink-0 px-1">
+                  <div key={step.id} className="min-w-full shrink-0 px-1">
                     <step.component />
                   </div>
                 ))}

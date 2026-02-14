@@ -34,7 +34,7 @@ export function PersonalInfoStep() {
   const { data, updateData } = useOnboardingStore();
 
   const form = useForm<PersonalInfoForm>({
-    resolver: zodResolver(personalInfoSchema),
+    resolver: zodResolver(personalInfoSchema), // learn about zod and resolvers in react-hook-form
     defaultValues: {
       full_name: data.full_name || "",
       phone: data.phone || "",

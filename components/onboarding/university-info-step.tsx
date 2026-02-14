@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { set, z } from "zod";
+import { z } from "zod";
 import { useOnboardingStore } from "@/lib/stores/onboarding-store";
 import { COMMON_MAJORS } from "@/lib/constants";
 import {
