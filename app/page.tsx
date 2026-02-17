@@ -10,6 +10,7 @@ import { SignupModal } from "@/components/signup-modal";
 import Hero from "@/components/landingPage/hero";
 import About from "@/components/landingPage/about";
 import HowItWorks from "@/components/landingPage/how-it-works";
+import ForListers from "@/components/landingPage/for-listers";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -31,11 +32,9 @@ export default function LandingPage() {
       } = await supabase.auth.getUser();
 
       if (user) {
-        // Check if it's a student
         if (user.user_metadata?.user_type === "student") {
           setIsLoggedIn(true);
 
-          // Check student profile completion
           const { data: profile } = await supabase
             .from("student_profiles")
             .select("profile_completed")
@@ -46,7 +45,6 @@ export default function LandingPage() {
             setIsOnboarded(true);
           }
         } else {
-          // Not a student, sign them out
           await supabase.auth.signOut();
         }
       }
@@ -59,7 +57,7 @@ export default function LandingPage() {
 
   const handleSetupProfile = () => {
     if (!isLoggedIn) {
-      setShowSignup(true); // Show signup for new users
+      setShowSignup(true);
     } else {
       router.push("/onboarding");
     }
@@ -88,28 +86,22 @@ export default function LandingPage() {
       ?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Switch between modals
-  const switchToSignup = () => {
-    setShowLogin(false);
-    setShowSignup(true);
-  };
-
-  const switchToLogin = () => {
-    setShowSignup(false);
-    setShowLogin(true);
-  };
-
   if (isChecking) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header isLoggedIn={isLoggedIn} isOnboarded={isOnboarded} />
+      <Header
+        isLoggedIn={isLoggedIn}
+        isOnboarded={isOnboarded}
+        onLoginSuccess={handleLoginSuccess}
+        onSignupSuccess={handleSignupSuccess}
+      />
 
       <main className="flex-1">
         <Hero />
@@ -120,6 +112,7 @@ export default function LandingPage() {
           handleSetupProfile={handleSetupProfile}
           handleGoToDashboard={handleGoToDashboard}
         />
+        <ForListers />
       </main>
 
       <Footer />
@@ -127,14 +120,20 @@ export default function LandingPage() {
       <LoginModal
         open={showLogin}
         onOpenChange={setShowLogin}
-        onSwitchToSignup={switchToSignup}
+        onSwitchToSignup={() => {
+          setShowLogin(false);
+          setShowSignup(true);
+        }}
         onSuccess={handleLoginSuccess}
       />
 
       <SignupModal
         open={showSignup}
         onOpenChange={setShowSignup}
-        onSwitchToLogin={switchToLogin}
+        onSwitchToLogin={() => {
+          setShowSignup(false);
+          setShowLogin(true);
+        }}
         onSuccess={handleSignupSuccess}
       />
     </div>
