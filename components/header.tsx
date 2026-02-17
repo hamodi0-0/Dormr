@@ -10,11 +10,15 @@ import Link from "next/link";
 interface HeaderProps {
   isLoggedIn?: boolean;
   isOnboarded?: boolean;
+  onLoginSuccess?: () => void;
+  onSignupSuccess?: () => void;
 }
 
 export function Header({
   isLoggedIn = false,
   isOnboarded = false,
+  onLoginSuccess,
+  onSignupSuccess,
 }: HeaderProps) {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [signupModalOpen, setSignupModalOpen] = useState(false);
@@ -32,10 +36,12 @@ export function Header({
 
   const handleLoginSuccess = () => {
     setLoginModalOpen(false);
+    onLoginSuccess?.();
   };
 
   const handleSignupSuccess = () => {
     setSignupModalOpen(false);
+    onSignupSuccess?.();
   };
 
   const switchToSignup = () => {
@@ -54,10 +60,12 @@ export function Header({
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-purple-600 dark:from-indigo-500 dark:to-purple-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">D</span>
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <span className="text-primary-foreground font-serif font-bold text-lg">
+                D
+              </span>
             </div>
-            <span className="text-xl font-bold">Dorm Match</span>
+            <span className="text-xl font-serif font-medium">Dormr</span>
           </Link>
 
           {/* Navigation */}
@@ -65,23 +73,23 @@ export function Header({
             <a
               href="#about"
               onClick={(e) => handleNavClick(e, "about")}
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors text-sm"
             >
               About
             </a>
             <a
               href="#how-it-works"
               onClick={(e) => handleNavClick(e, "how-it-works")}
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors text-sm"
             >
               How It Works
             </a>
             <a
-              href="#features"
-              onClick={(e) => handleNavClick(e, "features")}
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              href="#for-listers"
+              onClick={(e) => handleNavClick(e, "for-listers")}
+              className="text-muted-foreground hover:text-foreground transition-colors text-sm"
             >
-              Features
+              For Listers
             </a>
           </nav>
 
