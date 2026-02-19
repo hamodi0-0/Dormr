@@ -2,6 +2,7 @@ import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ProfilePageClient } from "@/components/dashboard/profile-page-client";
+import type { StudentProfile } from "@/hooks/queries/use-student-profile";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -12,6 +13,7 @@ export default async function ProfilePage() {
 
   if (!user) redirect("/");
 
+  // Fetch initial data on server
   const { data: profile } = await supabase
     .from("student_profiles")
     .select("*")
@@ -23,7 +25,10 @@ export default async function ProfilePage() {
   return (
     <>
       <DashboardHeader title="Profile" />
-      <ProfilePageClient profile={profile} userEmail={user.email ?? ""} />
+      <ProfilePageClient
+        initialProfile={profile as StudentProfile}
+        userEmail={user.email ?? ""}
+      />
     </>
   );
 }

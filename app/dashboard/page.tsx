@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { DashboardHomeClient } from "@/components/dashboard/dashboard-home-client";
+import type { StudentProfile } from "@/hooks/queries/use-student-profile";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -13,9 +14,10 @@ export default async function DashboardPage() {
   if (!user) redirect("/");
   if (user.user_metadata?.user_type !== "student") redirect("/");
 
+  // Fetch initial data on server (faster, no loading state)
   const { data: profile } = await supabase
     .from("student_profiles")
-    .select("full_name, university_name, major, year_of_study, avatar_url")
+    .select("*")
     .eq("id", user.id)
     .single();
 
@@ -23,8 +25,9 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <DashboardHeader title="Home" />
-      <DashboardHomeClient profile={profile} />
+      <DashboardHeader title="Dashboard" />
+      {/* Pass server data as initialData to React Query */}
+      <DashboardHomeClient initialProfile={profile as StudentProfile} />
     </>
   );
 }

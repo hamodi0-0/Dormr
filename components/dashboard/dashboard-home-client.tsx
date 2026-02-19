@@ -31,17 +31,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-
-interface DashboardProfile {
-  full_name: string;
-  university_name: string;
-  major: string;
-  year_of_study: string;
-  avatar_url: string | null;
-}
+import {
+  useStudentProfile,
+  type StudentProfile,
+} from "@/hooks/queries/use-student-profile";
 
 interface DashboardHomeClientProps {
-  profile: DashboardProfile;
+  initialProfile: StudentProfile;
 }
 
 const YEAR_LABELS: Record<string, string> = {
@@ -133,13 +129,19 @@ function getMatchBg(score: number): string {
   return "bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-800";
 }
 
-export function DashboardHomeClient({ profile }: DashboardHomeClientProps) {
+export function DashboardHomeClient({
+  initialProfile,
+}: DashboardHomeClientProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("match");
   const [filterType, setFilterType] = useState("all");
 
-  const firstName = profile.full_name.split(" ")[0];
-  const yearLabel = YEAR_LABELS[profile.year_of_study] ?? profile.year_of_study;
+  // Use React Query with initialData from server (no loading state!)
+  const { data: profile } = useStudentProfile(initialProfile);
+
+  const firstName = profile!.full_name.split(" ")[0];
+  const yearLabel =
+    YEAR_LABELS[profile!.year_of_study] ?? profile!.year_of_study;
 
   const filteredDorms = PLACEHOLDER_DORMS.filter((dorm) => {
     const matchesSearch =
@@ -173,7 +175,7 @@ export function DashboardHomeClient({ profile }: DashboardHomeClientProps) {
               Welcome back, {firstName}! 👋
             </h1>
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-              {yearLabel} · {profile.major} · {profile.university_name}
+              {yearLabel} · {profile!.major} · {profile!.university_name}
             </p>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 self-start">
@@ -183,6 +185,50 @@ export function DashboardHomeClient({ profile }: DashboardHomeClientProps) {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8">
+        {[
+          {
+            icon: Home,
+            label: "Available Dorms",
+            value: "248",
+            sub: "near your campus",
+          },
+          {
+            icon: Star,
+            label: "Top Match",
+            value: "94%",
+            sub: "compatibility",
+          },
+          {
+            icon: Users,
+            label: "Active Students",
+            value: "1,200+",
+            sub: "looking for rooms",
+          },
+          {
+            icon: BookOpen,
+            label: "New Listings",
+            value: "32",
+            sub: "this week",
+          },
+        ].map((stat) => (
+          <Card key={stat.label} className="py-0">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                  <stat.icon className="h-3.5 w-3.5 text-primary" />
+                </div>
+              </div>
+              <p className="text-xl sm:text-2xl font-serif font-semibold text-foreground">
+                {stat.value}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">{stat.sub}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Search Section */}

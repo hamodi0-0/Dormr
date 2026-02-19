@@ -21,11 +21,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useSidebar } from "@/components/dashboard/sidebar-context";
+import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useStudentProfile } from "@/hooks/use-student-profile";
+import { useStudentProfile } from "@/hooks/queries/use-student-profile";
 
 interface NavItem {
   href: string;
@@ -62,9 +62,11 @@ const NAV_ITEMS: NavItem[] = [
 
 export function DashboardSidebar() {
   const pathname = usePathname();
+  const isOpen = useSidebarStore((state) => state.isOpen);
   const router = useRouter();
-  const { isOpen } = useSidebar();
-  const { profile } = useStudentProfile();
+
+  // Use React Query - will use cached data if available
+  const { data: profile, isLoading } = useStudentProfile();
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -104,14 +106,12 @@ export function DashboardSidebar() {
         >
           <Link href="/dashboard" className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
-              <span className="text-lg font-serif font-semibold text-primary-foreground truncate">
-                D
-              </span>
+              <Building2 className="h-4 w-4 text-primary-foreground" />
             </div>
             {isOpen && (
-              <h1 className="text-2xl font-serif font-semibold text-sidebar-foreground truncate">
+              <span className="text-lg font-serif font-medium text-sidebar-foreground truncate">
                 Dormr
-              </h1>
+              </span>
             )}
           </Link>
         </div>
@@ -212,20 +212,32 @@ export function DashboardSidebar() {
               href="/dashboard/profile"
               className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-sidebar-accent/60 transition-colors group"
             >
-              <Avatar className="h-8 w-8 shrink-0">
-                <AvatarImage src={profile?.avatar_url ?? undefined} />
-                <AvatarFallback className="text-xs bg-primary/10 text-primary font-medium">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-sidebar-foreground truncate leading-none mb-0.5">
-                  {profile?.full_name ?? "Student"}
-                </p>
-                <p className="text-xs text-primary font-medium uppercase tracking-wide">
-                  Student
-                </p>
-              </div>
+              {isLoading ? (
+                <>
+                  <div className="h-8 w-8 rounded-full bg-muted animate-pulse shrink-0" />
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <div className="h-3 w-24 bg-muted rounded animate-pulse" />
+                    <div className="h-2.5 w-16 bg-muted rounded animate-pulse" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Avatar className="h-8 w-8 shrink-0">
+                    <AvatarImage src={profile?.avatar_url ?? undefined} />
+                    <AvatarFallback className="text-xs bg-primary/10 text-primary font-medium">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-sidebar-foreground truncate leading-none mb-0.5">
+                      {profile?.full_name ?? "Student"}
+                    </p>
+                    <p className="text-xs text-primary font-medium uppercase tracking-wide">
+                      Student
+                    </p>
+                  </div>
+                </>
+              )}
             </Link>
           ) : (
             <Tooltip>
@@ -234,12 +246,16 @@ export function DashboardSidebar() {
                   href="/dashboard/profile"
                   className="flex justify-center py-2"
                 >
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={profile?.avatar_url ?? undefined} />
-                    <AvatarFallback className="text-xs bg-primary/10 text-primary font-medium">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
+                  {isLoading ? (
+                    <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+                  ) : (
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={profile?.avatar_url ?? undefined} />
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary font-medium">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
                 </Link>
               </TooltipTrigger>
               <TooltipContent side="right">
@@ -253,7 +269,7 @@ export function DashboardSidebar() {
             <Button
               variant="ghost"
               onClick={handleLogout}
-              className="w-full justify-start gap-3 px-3 text-sm font-medium text-sidebar-foreground/70 hover:text-red-400 hover:bg-red-50/50 h-10"
+              className="w-full justify-start gap-3 px-3 text-sm font-medium text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/60 h-10"
             >
               <LogOut className="h-4 w-4 shrink-0" />
               Sign Out
@@ -265,14 +281,12 @@ export function DashboardSidebar() {
                   variant="ghost"
                   size="icon"
                   onClick={handleLogout}
-                  className="w-10 h-10 mx-auto flex text-sidebar-foreground/60 hover:text-red-400 hover:bg-red-50/50"
+                  className="w-10 h-10 mx-auto flex text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60"
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent className="text-red-400" side="right">
-                Sign Out
-              </TooltipContent>
+              <TooltipContent side="right">Sign Out</TooltipContent>
             </Tooltip>
           )}
         </div>

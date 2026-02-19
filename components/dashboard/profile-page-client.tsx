@@ -18,28 +18,13 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-
-interface StudentProfileData {
-  full_name: string;
-  avatar_url: string | null;
-  gender: string;
-  university_name: string;
-  year_of_study: string;
-  major: string;
-  bio: string | null;
-  hobbies: string[];
-  sleep_schedule: string;
-  cleanliness: number;
-  noise_level: string;
-  guests_frequency: string;
-  study_location: string;
-  smoking: boolean;
-  pets: boolean;
-  diet_preference: string;
-}
+import {
+  useStudentProfile,
+  type StudentProfile,
+} from "@/hooks/queries/use-student-profile";
 
 interface ProfilePageClientProps {
-  profile: StudentProfileData;
+  initialProfile: StudentProfile;
   userEmail: string;
 }
 
@@ -84,10 +69,13 @@ const DIET_LABELS: Record<string, string> = {
 };
 
 export function ProfilePageClient({
-  profile,
+  initialProfile,
   userEmail,
 }: ProfilePageClientProps) {
-  const initials = profile.full_name
+  // Use React Query with initialData from server (no loading state!)
+  const { data: profile } = useStudentProfile(initialProfile);
+
+  const initials = profile!.full_name
     .split(" ")
     .map((n: string) => n[0])
     .join("")
@@ -114,7 +102,7 @@ export function ProfilePageClient({
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
             <div className="relative">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={profile.avatar_url ?? undefined} />
+                <AvatarImage src={profile!.avatar_url ?? undefined} />
                 <AvatarFallback className="text-2xl bg-primary/10 text-primary font-medium font-serif">
                   {initials}
                 </AvatarFallback>
@@ -125,12 +113,12 @@ export function ProfilePageClient({
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-xl font-serif font-medium text-foreground">
-                {profile.full_name}
+                {profile!.full_name}
               </h2>
               <div className="flex flex-wrap items-center gap-2 mt-1">
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <MapPin className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{profile.university_name}</span>
+                  <span className="truncate">{profile!.university_name}</span>
                 </div>
                 <span className="text-muted-foreground/40">·</span>
                 <span className="text-sm text-muted-foreground">
@@ -139,12 +127,13 @@ export function ProfilePageClient({
               </div>
               <div className="flex flex-wrap gap-2 mt-3">
                 <Badge variant="secondary" className="capitalize">
-                  {profile.gender}
+                  {profile!.gender}
                 </Badge>
                 <Badge variant="secondary">
-                  {YEAR_LABELS[profile.year_of_study] ?? profile.year_of_study}
+                  {YEAR_LABELS[profile!.year_of_study] ??
+                    profile!.year_of_study}
                 </Badge>
-                <Badge variant="outline">{profile.major}</Badge>
+                <Badge variant="outline">{profile!.major}</Badge>
               </div>
             </div>
             <Button
@@ -158,10 +147,10 @@ export function ProfilePageClient({
             </Button>
           </div>
 
-          {profile.bio && (
+          {profile!.bio && (
             <div className="mt-5 pt-5 border-t border-border">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {profile.bio}
+                {profile!.bio}
               </p>
             </div>
           )}
@@ -185,28 +174,29 @@ export function ProfilePageClient({
               {
                 label: "Sleep Schedule",
                 value:
-                  SLEEP_LABELS[profile.sleep_schedule] ??
-                  profile.sleep_schedule,
+                  SLEEP_LABELS[profile!.sleep_schedule] ??
+                  profile!.sleep_schedule,
               },
               {
                 label: "Cleanliness",
-                value: `${profile.cleanliness}/5`,
+                value: `${profile!.cleanliness}/5`,
               },
               {
                 label: "Noise Level",
-                value: NOISE_LABELS[profile.noise_level] ?? profile.noise_level,
+                value:
+                  NOISE_LABELS[profile!.noise_level] ?? profile!.noise_level,
               },
               {
                 label: "Guests",
                 value:
-                  GUEST_LABELS[profile.guests_frequency] ??
-                  profile.guests_frequency,
+                  GUEST_LABELS[profile!.guests_frequency] ??
+                  profile!.guests_frequency,
               },
               {
                 label: "Study Location",
                 value:
-                  STUDY_LABELS[profile.study_location] ??
-                  profile.study_location,
+                  STUDY_LABELS[profile!.study_location] ??
+                  profile!.study_location,
               },
             ].map((item) => (
               <div
@@ -239,17 +229,17 @@ export function ProfilePageClient({
             {[
               {
                 label: "Smoking",
-                value: profile.smoking ? "Yes" : "No",
+                value: profile!.smoking ? "Yes" : "No",
               },
               {
                 label: "Pets",
-                value: profile.pets ? "Yes" : "No",
+                value: profile!.pets ? "Yes" : "No",
               },
               {
                 label: "Diet",
                 value:
-                  DIET_LABELS[profile.diet_preference] ??
-                  profile.diet_preference,
+                  DIET_LABELS[profile!.diet_preference] ??
+                  profile!.diet_preference,
               },
             ].map((item) => (
               <div
@@ -269,7 +259,7 @@ export function ProfilePageClient({
       </div>
 
       {/* Hobbies Card */}
-      {profile.hobbies && profile.hobbies.length > 0 && (
+      {profile!.hobbies && profile!.hobbies.length > 0 && (
         <Card className="py-0">
           <CardHeader className="pb-0 pt-5 px-5">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -279,7 +269,7 @@ export function ProfilePageClient({
           </CardHeader>
           <CardContent className="pt-4 pb-5 px-5">
             <div className="flex flex-wrap gap-2">
-              {profile.hobbies.map((hobby: string) => (
+              {profile!.hobbies.map((hobby: string) => (
                 <Badge key={hobby} variant="secondary" className="text-xs">
                   {hobby}
                 </Badge>
@@ -299,13 +289,13 @@ export function ProfilePageClient({
         </CardHeader>
         <CardContent className="pt-4 pb-5 px-5 space-y-3">
           {[
-            { label: "University", value: profile.university_name },
+            { label: "University", value: profile!.university_name },
             {
               label: "Year",
               value:
-                YEAR_LABELS[profile.year_of_study] ?? profile.year_of_study,
+                YEAR_LABELS[profile!.year_of_study] ?? profile!.year_of_study,
             },
-            { label: "Major", value: profile.major },
+            { label: "Major", value: profile!.major },
           ].map((item) => (
             <div key={item.label} className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">

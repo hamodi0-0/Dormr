@@ -1,6 +1,6 @@
 "use client";
 
-import { useSidebar } from "@/components/dashboard/sidebar-context";
+import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import { cn } from "@/lib/utils";
 
 export function DashboardLayoutClient({
@@ -8,7 +8,7 @@ export function DashboardLayoutClient({
 }: {
   children: React.ReactNode;
 }) {
-  const { isOpen } = useSidebar();
+  const { isOpen } = useSidebarStore();
 
   return (
     <div
