@@ -89,6 +89,8 @@ export function DashboardSidebar() {
         .slice(0, 2)
     : "?";
 
+  console.log(profile?.avatar_url);
+
   return (
     <TooltipProvider delayDuration={0}>
       <aside
@@ -223,7 +225,10 @@ export function DashboardSidebar() {
               ) : (
                 <>
                   <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarImage src={profile?.avatar_url ?? undefined} />
+                    <AvatarImage
+                      src={profile?.avatar_url ?? undefined}
+                      className="object-cover"
+                    />
                     <AvatarFallback className="text-xs bg-primary/10 text-primary font-medium">
                       {initials}
                     </AvatarFallback>

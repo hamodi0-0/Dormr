@@ -1,14 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  User,
-  GraduationCap,
-  Moon,
-  Sparkles,
-  MapPin,
-  ImagePlus,
-} from "lucide-react";
+import { User, GraduationCap, Moon, Sparkles, MapPin } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -16,7 +9,6 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
@@ -28,6 +20,7 @@ import { type ProfileUpdate } from "@/lib/schemas/profile-edit-schema";
 import { EditableField } from "@/components/dashboard/editable-field";
 import { EditableSearchField } from "@/components/dashboard/editable-search-field";
 import { EditableHobbies } from "@/components/dashboard/editable-hobbies";
+import { AvatarUpload } from "@/components/dashboard/avatar-upload";
 import { COMMON_MAJORS } from "@/lib/constants";
 import { useUniversitySearch } from "@/hooks/use-university-search";
 
@@ -152,21 +145,7 @@ export function ProfilePageClient({
       <Card className="mb-4 py-0">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 mb-6">
-            {/* Avatar — upload coming next phase */}
-            <div className="relative group/avatar shrink-0">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={profile.avatar_url ?? undefined} />
-                <AvatarFallback className="text-2xl bg-primary/10 text-primary font-medium font-serif">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity cursor-not-allowed">
-                <ImagePlus className="h-5 w-5 text-white" />
-              </div>
-              <p className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] text-muted-foreground opacity-0 group-hover/avatar:opacity-100 transition-opacity">
-                Upload coming soon
-              </p>
-            </div>
+            <AvatarUpload currentUrl={profile.avatar_url} initials={initials} />
 
             <div className="flex-1 min-w-0">
               <h2 className="text-xl font-serif font-medium text-foreground">
