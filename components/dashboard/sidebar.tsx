@@ -25,7 +25,7 @@ import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useStudentProfile } from "@/hooks/queries/use-student-profile";
+import { useStudentProfile } from "@/hooks/use-student-profile";
 
 interface NavItem {
   href: string;

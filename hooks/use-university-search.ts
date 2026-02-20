@@ -1,57 +1,44 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 
-interface University {
+export interface University {
   name: string;
   country: string;
   web_pages: string[];
   alpha_two_code: string;
 }
 
-export function useUniversitySearch() {
-  const [universities, setUniversities] = useState<University[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout>(null);
+const fetchUniversities = async (query: string): Promise<University[]> => {
+  const response = await fetch(
+    `http://universities.hipolabs.com/search?name=${encodeURIComponent(query)}`,
+  );
 
-  const searchUniversities = useCallback((query: string) => {
-    if (query.length < 2) {
-      setUniversities([]);
-      return;
-    }
+  if (!response.ok) {
+    throw new Error(`Failed to fetch universities: ${response.statusText}`);
+  }
 
-    // Clear previous timeout
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
+  const data: University[] = await response.json();
+  return data.slice(0, 10);
+};
 
-    setIsLoading(true);
+/**
+ * Searches universities via the Hipolabs API.
+ * Data changes frequently based on user input → React Query with debounced key.
+ */
+export function useUniversitySearch(query: string) {
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
 
-    // Debounce the API call
-    timeoutRef.current = setTimeout(async () => {
-      try {
-        const response = await fetch(
-          `http://universities.hipolabs.com/search?name=${encodeURIComponent(query)}`,
-        );
-        const data = await response.json();
-        setUniversities(data.slice(0, 10)); // Limit to 10 results
-      } catch (error) {
-        console.error("Error fetching universities:", error);
-        setUniversities([]);
-      } finally {
-        setIsLoading(false);
-      }
-    }, 300);
-  }, []);
-
-  // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
+    const timeout = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(timeout);
+  }, [query]);
 
-  return { universities, isLoading, searchUniversities };
+  return useQuery({
+    queryKey: ["universities", debouncedQuery],
+    queryFn: () => fetchUniversities(debouncedQuery),
+    enabled: debouncedQuery.length >= 2,
+    staleTime: 1000 * 60 * 5, // 5 min – results are stable enough to cache
+  });
 }

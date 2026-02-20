@@ -2,7 +2,7 @@ import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ProfilePageClient } from "@/components/dashboard/profile-page-client";
-import type { StudentProfile } from "@/hooks/queries/use-student-profile";
+import type { StudentProfile } from "@/hooks/use-student-profile";
 
 export default async function ProfilePage() {
   const supabase = await createClient();

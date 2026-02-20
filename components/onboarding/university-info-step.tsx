@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useOnboardingStore } from "@/lib/stores/onboarding-store";
 import { COMMON_MAJORS } from "@/lib/constants";
 import {
@@ -24,22 +23,21 @@ import {
 } from "@/components/ui/select";
 import { useUniversitySearch } from "@/hooks/use-university-search";
 import { Loader2 } from "lucide-react";
-
-const universityInfoSchema = z.object({
-  university_name: z.string().min(2, "University name is required"),
-  year_of_study: z.string().min(1, "Year of study is required"),
-  major: z.string().min(2, "Major is required"),
-});
-
-type UniversityInfoForm = z.infer<typeof universityInfoSchema>;
+import {
+  UniversityInfoForm,
+  universityInfoSchema,
+} from "@/lib/schemas/university-info-schema";
 
 export function UniversityInfoStep() {
   const { data, updateData } = useOnboardingStore();
-  const { universities, isLoading, searchUniversities } = useUniversitySearch();
-  const [showUniversities, setShowUniversities] = useState(false);
   const [searchQuery, setSearchQuery] = useState(data.university_name || "");
   const [majorSearchQuery, setMajorSearchQuery] = useState(data.major || "");
+  const [showUniversities, setShowUniversities] = useState(false);
   const [showMajors, setShowMajors] = useState(false);
+  const [queryInput, setQueryInput] = useState("");
+
+  const { data: universities = [], isLoading } =
+    useUniversitySearch(queryInput);
 
   const filteredMajors = majorSearchQuery
     ? COMMON_MAJORS.filter((major) =>
@@ -65,7 +63,7 @@ export function UniversityInfoStep() {
 
   const handleUniversitySearch = (value: string) => {
     setSearchQuery(value);
-    searchUniversities(value);
+    setQueryInput(value);
     if (value.length >= 2) {
       setShowUniversities(true);
     } else {

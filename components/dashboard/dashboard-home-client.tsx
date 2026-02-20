@@ -34,7 +34,7 @@ import { cn } from "@/lib/utils";
 import {
   useStudentProfile,
   type StudentProfile,
-} from "@/hooks/queries/use-student-profile";
+} from "@/hooks/use-student-profile";
 
 interface DashboardHomeClientProps {
   initialProfile: StudentProfile;

@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import {
   useStudentProfile,
   type StudentProfile,
-} from "@/hooks/queries/use-student-profile";
+} from "@/hooks/use-student-profile";
 
 interface ProfilePageClientProps {
   initialProfile: StudentProfile;
