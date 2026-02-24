@@ -7,6 +7,7 @@ import type { Listing } from "@/lib/types/listing";
 /**
  * Initial page load data → Server Component.
  * Subsequent mutations (create/edit/delete) update via React Query.
+ * Excludes archived listings (soft-deleted).
  */
 export default async function MyListingsPage() {
   const supabase = await createClient();
@@ -33,7 +34,7 @@ export default async function MyListingsPage() {
     `,
     )
     .eq("lister_id", user.id)
-    .neq("status", "deleted")
+    .neq("status", "archived")
     .order("created_at", { ascending: false });
 
   return (

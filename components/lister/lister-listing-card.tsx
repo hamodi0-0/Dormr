@@ -30,9 +30,10 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import type { Listing } from "@/lib/types/listing";
+import type { Listing, ListingStatus } from "@/lib/types/listing";
 import {
   ROOM_TYPE_LABELS,
+  BILLING_PERIOD_SUFFIX,
   getCoverImageUrl,
   getAmenityLabels,
 } from "@/lib/types/listing";
@@ -47,28 +48,29 @@ export function ListerListingCard({ listing }: ListerListingCardProps) {
   const coverUrl = getCoverImageUrl(listing);
   const amenities = getAmenityLabels(listing);
   const isActive = listing.status === "active";
+  const isDraft = listing.status === "draft";
 
   const deleteMutation = useDeleteListingMutation();
   const updateMutation = useUpdateListingMutation();
 
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
 
-  const handleToggleStatus = async () => {
+  const handleToggleStatus = () => {
     setIsTogglingStatus(true);
-    const newStatus = isActive ? "inactive" : "active";
+    // draft → active, active → paused, paused → active
+    const newStatus: ListingStatus = isActive ? "paused" : "active";
+
     updateMutation.mutate(
       {
         id: listing.id,
-        updates: { status: newStatus } as Parameters<
-          typeof updateMutation.mutate
-        >[0]["updates"],
+        updates: { status: newStatus },
       },
       {
         onSuccess: () => {
           toast.success(
             newStatus === "active"
               ? "Listing is now active"
-              : "Listing is now hidden",
+              : "Listing is now paused",
           );
           setIsTogglingStatus(false);
         },
@@ -82,8 +84,8 @@ export function ListerListingCard({ listing }: ListerListingCardProps) {
 
   const handleDelete = () => {
     deleteMutation.mutate(listing.id, {
-      onSuccess: () => toast.success("Listing deleted"),
-      onError: () => toast.error("Failed to delete listing"),
+      onSuccess: () => toast.success("Listing archived"),
+      onError: () => toast.error("Failed to archive listing"),
     });
   };
 
@@ -91,6 +93,28 @@ export function ListerListingCard({ listing }: ListerListingCardProps) {
     "en-GB",
     { day: "numeric", month: "short", year: "numeric" },
   );
+
+  const priceSuffix = BILLING_PERIOD_SUFFIX[listing.billing_period] ?? "/mo";
+
+  const statusBadge = () => {
+    if (isActive)
+      return (
+        <Badge className="bg-emerald-500/90 text-white hover:bg-emerald-500 text-xs font-semibold">
+          Active
+        </Badge>
+      );
+    if (isDraft)
+      return (
+        <Badge className="bg-amber-500/90 text-white hover:bg-amber-500 text-xs font-semibold">
+          Draft
+        </Badge>
+      );
+    return (
+      <Badge className="bg-muted/90 text-muted-foreground hover:bg-muted text-xs font-semibold">
+        Paused
+      </Badge>
+    );
+  };
 
   return (
     <Card className="group py-0 gap-0 overflow-hidden transition-all duration-200 hover:shadow-md">
@@ -111,18 +135,7 @@ export function ListerListingCard({ listing }: ListerListingCardProps) {
         )}
 
         {/* Status badge */}
-        <div className="absolute top-3 left-3">
-          <Badge
-            className={cn(
-              "text-xs font-semibold",
-              isActive
-                ? "bg-emerald-500/90 text-white hover:bg-emerald-500"
-                : "bg-muted/90 text-muted-foreground hover:bg-muted",
-            )}
-          >
-            {isActive ? "Active" : "Hidden"}
-          </Badge>
-        </div>
+        <div className="absolute top-3 left-3">{statusBadge()}</div>
 
         {/* Image count */}
         {listing.listing_images && listing.listing_images.length > 0 && (
@@ -159,7 +172,7 @@ export function ListerListingCard({ listing }: ListerListingCardProps) {
             <span className="font-semibold text-foreground text-sm">
               £{listing.price_per_month.toLocaleString()}
             </span>
-            <span>/mo</span>
+            <span>{priceSuffix}</span>
           </div>
           <div className="flex items-center gap-1">
             <Calendar className="h-3.5 w-3.5" />
@@ -200,8 +213,13 @@ export function ListerListingCard({ listing }: ListerListingCardProps) {
             size="sm"
             className="h-8 text-xs gap-1.5"
             onClick={handleToggleStatus}
-            disabled={isTogglingStatus || updateMutation.isPending}
-            aria-label={isActive ? "Hide listing" : "Show listing"}
+            disabled={isTogglingStatus || updateMutation.isPending || isDraft}
+            aria-label={isActive ? "Pause listing" : "Activate listing"}
+            title={
+              isDraft
+                ? "Publish the listing first to toggle visibility"
+                : undefined
+            }
           >
             {isTogglingStatus ? (
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -211,7 +229,7 @@ export function ListerListingCard({ listing }: ListerListingCardProps) {
               <Eye className="h-3 w-3" />
             )}
             <span className="hidden sm:inline">
-              {isActive ? "Hide" : "Show"}
+              {isActive ? "Pause" : "Activate"}
             </span>
           </Button>
 
@@ -220,9 +238,11 @@ export function ListerListingCard({ listing }: ListerListingCardProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                className={cn(
+                  "h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10",
+                )}
                 disabled={deleteMutation.isPending}
-                aria-label="Delete listing"
+                aria-label="Archive listing"
               >
                 {deleteMutation.isPending ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -233,10 +253,10 @@ export function ListerListingCard({ listing }: ListerListingCardProps) {
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete this listing?</AlertDialogTitle>
+                <AlertDialogTitle>Archive this listing?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will permanently remove &quot;{listing.title}&quot; and
-                  all its photos. This action cannot be undone.
+                  &quot;{listing.title}&quot; will be archived and hidden from
+                  students. You can contact support to restore it.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -245,7 +265,7 @@ export function ListerListingCard({ listing }: ListerListingCardProps) {
                   onClick={handleDelete}
                   className="bg-destructive text-white hover:bg-destructive/90"
                 >
-                  Delete
+                  Archive
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

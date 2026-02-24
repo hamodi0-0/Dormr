@@ -2,13 +2,32 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import type { Listing } from "@/lib/types/listing";
+import type { Listing, ListingStatus } from "@/lib/types/listing";
 import type { CreateListingValues } from "@/lib/schemas/listing-schema";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+/**
+ * DB-level fields that are NOT part of the create form schema but can still
+ * be patched directly (e.g. status transitions from the card action buttons).
+ */
+interface ListingDbFields {
+  status?: ListingStatus;
+}
+
+/**
+ * Allow callers to supply any combination of form-driven values and DB fields.
+ * Keeping them as a union (rather than widening CreateListingValues) preserves
+ * the strict form schema boundary.
+ */
+export type ListingUpdates = Partial<CreateListingValues> & ListingDbFields;
 
 interface UpdateListingInput {
   id: string;
-  updates: Partial<CreateListingValues>;
+  updates: ListingUpdates;
 }
+
+// ─── Mutation fn ──────────────────────────────────────────────────────────────
 
 async function updateListing({
   id,
@@ -33,20 +52,21 @@ async function updateListing({
   return data as Listing;
 }
 
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+
 export function useUpdateListingMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: updateListing,
     onMutate: async ({ id, updates }) => {
-      // Cancel in-flight fetches so they don't overwrite optimistic update
       await queryClient.cancelQueries({ queryKey: ["lister-listings"] });
 
       const previousListings = queryClient.getQueryData<Listing[]>([
         "lister-listings",
       ]);
 
-      // Optimistically update the cache
+      // Optimistically apply the patch to the local cache
       queryClient.setQueryData<Listing[]>(
         ["lister-listings"],
         (old) =>
@@ -56,13 +76,11 @@ export function useUpdateListingMutation() {
       return { previousListings };
     },
     onError: (_error, _variables, context) => {
-      // Roll back on failure
       if (context?.previousListings) {
         queryClient.setQueryData(["lister-listings"], context.previousListings);
       }
     },
     onSuccess: (updatedListing) => {
-      // Replace the specific listing with the server response
       queryClient.setQueryData<Listing[]>(
         ["lister-listings"],
         (old) =>

@@ -20,6 +20,7 @@ import {
   Plus,
   ArrowRight,
   Sparkles,
+  FileEdit,
 } from "lucide-react";
 import Link from "next/link";
 import type { ListerProfile } from "@/hooks/use-lister-profile";
@@ -39,7 +40,7 @@ export default async function ListerDashboardPage() {
       .from("listings")
       .select("id, status, title, created_at")
       .eq("lister_id", user.id)
-      .neq("status", "deleted"),
+      .neq("status", "archived"),
   ]);
 
   const profile = profileResult.data as ListerProfile | null;
@@ -47,7 +48,8 @@ export default async function ListerDashboardPage() {
 
   const listings = listingsResult.data ?? [];
   const activeCount = listings.filter((l) => l.status === "active").length;
-  const hiddenCount = listings.filter((l) => l.status === "inactive").length;
+  const pausedCount = listings.filter((l) => l.status === "paused").length;
+  const draftCount = listings.filter((l) => l.status === "draft").length;
   const firstName = profile.full_name.split(" ")[0];
 
   return (
@@ -81,7 +83,7 @@ export default async function ListerDashboardPage() {
               icon: Home,
               label: "Total Listings",
               value: String(listings.length),
-              sub: "all time",
+              sub: "excl. archived",
             },
             {
               icon: Eye,
@@ -91,15 +93,15 @@ export default async function ListerDashboardPage() {
             },
             {
               icon: Clock,
-              label: "Hidden",
-              value: String(hiddenCount),
-              sub: "not currently shown",
+              label: "Paused",
+              value: String(pausedCount),
+              sub: "temporarily hidden",
             },
             {
-              icon: MessageSquare,
-              label: "Enquiries",
-              value: "—",
-              sub: "coming soon",
+              icon: FileEdit,
+              label: "Drafts",
+              value: String(draftCount),
+              sub: "not yet published",
             },
           ].map((stat) => (
             <Card key={stat.label} className="py-0">

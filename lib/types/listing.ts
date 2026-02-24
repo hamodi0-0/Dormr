@@ -6,7 +6,26 @@ export type GenderPreference =
   | "female_only"
   | "mixed"
   | "no_preference";
-export type ListingStatus = "active" | "inactive" | "deleted";
+
+/**
+ * Maps directly to the Supabase `listing_status` enum.
+ * - draft     : saved but not yet visible to students
+ * - active    : live and searchable
+ * - paused    : temporarily hidden by the lister
+ * - archived  : soft-deleted / no longer relevant
+ */
+export type ListingStatus = "draft" | "active" | "paused" | "archived";
+
+/**
+ * Maps directly to the Supabase `billing_period` enum.
+ * Represents how frequently the listed price is charged.
+ */
+export type BillingPeriod =
+  | "weekly"
+  | "monthly"
+  | "quarterly"
+  | "semi_annually"
+  | "annually";
 
 // ─── Core types ───────────────────────────────────────────────────────────────
 
@@ -23,6 +42,7 @@ export interface Listing {
   description: string | null;
   room_type: RoomType;
   price_per_month: number;
+  billing_period: BillingPeriod;
   available_from: string; // ISO date string
   min_stay_months: number;
   max_occupants: number;
@@ -85,6 +105,25 @@ export const GENDER_PREFERENCE_LABELS: Record<GenderPreference, string> = {
   no_preference: "No Preference",
 };
 
+export const BILLING_PERIOD_LABELS: Record<BillingPeriod, string> = {
+  weekly: "Weekly",
+  monthly: "Monthly",
+  quarterly: "Quarterly (every 3 months)",
+  semi_annually: "Semi-annually (every 6 months)",
+  annually: "Annually (yearly)",
+};
+
+/**
+ * Short suffix shown next to price, e.g. "£650 /mo" or "£7,800 /yr".
+ */
+export const BILLING_PERIOD_SUFFIX: Record<BillingPeriod, string> = {
+  weekly: "/wk",
+  monthly: "/mo",
+  quarterly: "/qtr",
+  semi_annually: "/6mo",
+  annually: "/yr",
+};
+
 /**
  * Returns an array of human-readable amenity labels for a listing.
  * Only includes amenities that are true.
@@ -111,7 +150,7 @@ export function getCoverImageUrl(listing: Listing): string | null {
 }
 
 /**
- * Returns true if the listing is currently accepting enquiries.
+ * Returns true if the listing is currently visible to students.
  */
 export function isListingAvailable(listing: Listing): boolean {
   return listing.status === "active";

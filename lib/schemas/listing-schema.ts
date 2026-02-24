@@ -18,6 +18,9 @@ export const createListingSchema = z.object({
   price_per_month: z.coerce
     .number({ error: "Price is required" })
     .positive("Price must be greater than 0"),
+  billing_period: z
+    .enum(["weekly", "monthly", "quarterly", "semi_annually", "annually"])
+    .default("monthly"),
   available_from: z.string().min(1, "Please select an availability date"),
   min_stay_months: z
     .number()

@@ -15,13 +15,13 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { ListerListingCard } from "@/components/lister/lister-listing-card";
 import { useListerListings } from "@/hooks/use-lister-listings";
-import type { Listing } from "@/lib/types/listing";
+import type { Listing, ListingStatus } from "@/lib/types/listing";
 
 interface MyListingsClientProps {
   initialListings: Listing[];
 }
 
-type StatusFilter = "all" | "active" | "inactive";
+type StatusFilter = "all" | ListingStatus;
 
 export function MyListingsClient({ initialListings }: MyListingsClientProps) {
   const { data: listings = [] } = useListerListings(initialListings);
@@ -35,10 +35,7 @@ export function MyListingsClient({ initialListings }: MyListingsClientProps) {
       l.title.toLowerCase().includes(search.toLowerCase()) ||
       l.city.toLowerCase().includes(search.toLowerCase());
 
-    const matchesStatus =
-      statusFilter === "all" ||
-      (statusFilter === "active" && l.status === "active") ||
-      (statusFilter === "inactive" && l.status === "inactive");
+    const matchesStatus = statusFilter === "all" || l.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
@@ -79,14 +76,15 @@ export function MyListingsClient({ initialListings }: MyListingsClientProps) {
             value={statusFilter}
             onValueChange={(v) => setStatusFilter(v as StatusFilter)}
           >
-            <SelectTrigger className="h-10 w-auto min-w-[140px]">
+            <SelectTrigger className="h-10 w-auto min-w-[150px]">
               <SlidersHorizontal className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All listings</SelectItem>
-              <SelectItem value="active">Active only</SelectItem>
-              <SelectItem value="inactive">Hidden only</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="paused">Paused</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -94,7 +92,6 @@ export function MyListingsClient({ initialListings }: MyListingsClientProps) {
 
       {/* Content */}
       {listings.length === 0 ? (
-        /* Empty state — no listings yet */
         <Card className="py-16">
           <CardContent className="flex flex-col items-center gap-4 text-center">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
@@ -118,7 +115,6 @@ export function MyListingsClient({ initialListings }: MyListingsClientProps) {
           </CardContent>
         </Card>
       ) : filtered.length === 0 ? (
-        /* Empty filtered state */
         <Card className="py-12">
           <CardContent className="flex flex-col items-center gap-3 text-center">
             <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
@@ -141,7 +137,6 @@ export function MyListingsClient({ initialListings }: MyListingsClientProps) {
           </CardContent>
         </Card>
       ) : (
-        /* Listings grid */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((listing) => (
             <ListerListingCard key={listing.id} listing={listing} />

@@ -20,6 +20,7 @@ export default async function EditListingPage({
   if (!user) redirect("/");
 
   // Fetch the listing with its images — confirm ownership server-side
+  // Archived listings cannot be edited
   const { data: listing, error } = await supabase
     .from("listings")
     .select(
@@ -38,7 +39,7 @@ export default async function EditListingPage({
     )
     .eq("id", id)
     .eq("lister_id", user.id) // ownership guard
-    .neq("status", "deleted")
+    .neq("status", "archived")
     .single();
 
   if (error || !listing) notFound();
