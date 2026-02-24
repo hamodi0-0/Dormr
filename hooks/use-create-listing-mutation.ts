@@ -18,7 +18,9 @@ async function createListing(values: CreateListingValues): Promise<Listing> {
     .insert({
       ...values,
       lister_id: user.id,
-      status: "active",
+      // New listings start as active so they're immediately visible to students.
+      // Listers can pause/archive from the listings page.
+      status: "active" as const,
     })
     .select()
     .single();

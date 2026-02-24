@@ -29,7 +29,7 @@ async function fetchListerListings(): Promise<Listing[]> {
     `,
     )
     .eq("lister_id", user.id)
-    .neq("status", "deleted")
+    .neq("status", "archived")
     .order("created_at", { ascending: false });
 
   if (error) throw error;
@@ -37,14 +37,13 @@ async function fetchListerListings(): Promise<Listing[]> {
 }
 
 /**
- * Data changes when the lister creates/edits/deletes listings → React Query
- * (this is user-driven change, not initial page load data).
+ * Data changes when the lister creates/edits/archives listings → React Query.
  */
 export function useListerListings(initialData?: Listing[]) {
   return useQuery({
     queryKey: ["lister-listings"],
     queryFn: fetchListerListings,
     initialData,
-    staleTime: 30 * 1000, // 30 s — listings can change frequently during editing
+    staleTime: 30 * 1000,
   });
 }

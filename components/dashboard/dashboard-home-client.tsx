@@ -40,6 +40,7 @@ import { usePublicListings } from "@/hooks/use-public-listings";
 import type { Listing } from "@/lib/types/listing";
 import {
   ROOM_TYPE_LABELS,
+  BILLING_PERIOD_SUFFIX,
   getCoverImageUrl,
   getAmenityLabels,
 } from "@/lib/types/listing";
@@ -83,20 +84,13 @@ export function DashboardHomeClient({
         l.city.toLowerCase().includes(q) ||
         ROOM_TYPE_LABELS[l.room_type].toLowerCase().includes(q);
 
-      const matchesType =
-        filterType === "all" ||
-        (filterType === "single" && l.room_type === "single") ||
-        (filterType === "shared" && l.room_type === "shared") ||
-        (filterType === "studio" && l.room_type === "studio") ||
-        (filterType === "entire_apartment" &&
-          l.room_type === "entire_apartment");
+      const matchesType = filterType === "all" || l.room_type === filterType;
 
       return matchesSearch && matchesType;
     })
     .sort((a, b) => {
       if (sortBy === "price_asc") return a.price_per_month - b.price_per_month;
       if (sortBy === "price_desc") return b.price_per_month - a.price_per_month;
-      // newest
       return (
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
@@ -107,7 +101,6 @@ export function DashboardHomeClient({
     ? Math.min(...listings.map((l) => l.price_per_month))
     : null;
 
-  // Listings added in the last 7 days
   const newThisWeek = listings.filter((l) => {
     const created = new Date(l.created_at);
     const weekAgo = new Date();
@@ -150,7 +143,7 @@ export function DashboardHomeClient({
             icon: BadgePoundSterling,
             label: "Lowest Price",
             value: lowestPrice ? `£${lowestPrice.toLocaleString()}` : "—",
-            sub: "per month",
+            sub: "per billing period",
           },
           {
             icon: Calendar,
@@ -311,6 +304,8 @@ function ListingCard({ listing }: { listing: Listing }) {
     { day: "numeric", month: "short" },
   );
 
+  const priceSuffix = BILLING_PERIOD_SUFFIX[listing.billing_period] ?? "/mo";
+
   return (
     <Card
       className={cn(
@@ -367,7 +362,7 @@ function ListingCard({ listing }: { listing: Listing }) {
             <span className="text-sm font-semibold text-foreground">
               £{listing.price_per_month.toLocaleString()}
               <span className="text-xs font-normal text-muted-foreground">
-                /mo
+                {priceSuffix}
               </span>
             </span>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">

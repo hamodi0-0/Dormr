@@ -16,7 +16,8 @@ import { geocodeAddress } from "@/lib/geocoding";
 import { useCreateListingMutation } from "@/hooks/use-create-listing-mutation";
 import { useUpdateListingMutation } from "@/hooks/use-update-listing-mutation";
 import { createClient } from "@/lib/supabase/client";
-import type { Listing, ListingImage } from "@/lib/types/listing";
+import type { Listing, ListingImage, BillingPeriod } from "@/lib/types/listing";
+import { BILLING_PERIOD_LABELS } from "@/lib/types/listing";
 
 import {
   Form,
@@ -63,19 +64,23 @@ const AMENITIES = [
   { name: "furnished" as const, label: "Furnished" },
 ] satisfies { name: keyof CreateListingValues; label: string }[];
 
-const ROOM_TYPE_LABELS: Record<string, string> = {
-  single: "Single Room",
-  shared: "Shared Room",
-  studio: "Studio",
-  entire_apartment: "Entire Apartment",
-};
+const ROOM_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: "single", label: "Single Room" },
+  { value: "shared", label: "Shared Room" },
+  { value: "studio", label: "Studio" },
+  { value: "entire_apartment", label: "Entire Apartment" },
+];
 
-const GENDER_PREF_LABELS: Record<string, string> = {
-  male_only: "Male Only",
-  female_only: "Female Only",
-  mixed: "Mixed",
-  no_preference: "No Preference",
-};
+const GENDER_PREF_OPTIONS: { value: string; label: string }[] = [
+  { value: "male_only", label: "Male Only" },
+  { value: "female_only", label: "Female Only" },
+  { value: "mixed", label: "Mixed" },
+  { value: "no_preference", label: "No Preference" },
+];
+
+const BILLING_PERIOD_OPTIONS = Object.entries(BILLING_PERIOD_LABELS).map(
+  ([value, label]) => ({ value: value as BillingPeriod, label }),
+);
 
 // ─── Image Helpers ────────────────────────────────────────────────────────────
 
@@ -116,7 +121,6 @@ async function removeImageFromStorage(
   supabase: ReturnType<typeof createClient>,
   image: ListingImage,
 ): Promise<void> {
-  // Best-effort — don't throw if storage removal partially fails
   await supabase.storage.from("listing-images").remove([image.storage_path]);
   const { error } = await supabase
     .from("listing_images")
@@ -132,7 +136,6 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
   const createMutation = useCreateListingMutation();
   const updateMutation = useUpdateListingMutation();
 
-  // Image state is kept outside RHF — uploaded after the listing row is created
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [existingImages, setExistingImages] = useState<ListingImage[]>(
     listing?.listing_images ?? [],
@@ -153,6 +156,7 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
           description: listing.description ?? "",
           room_type: listing.room_type,
           price_per_month: listing.price_per_month,
+          billing_period: listing.billing_period,
           available_from: listing.available_from,
           min_stay_months: listing.min_stay_months,
           max_occupants: listing.max_occupants,
@@ -172,10 +176,23 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
           longitude: listing.longitude ?? undefined,
         }
       : {
-          country: "United Kingdom",
+          // Provide explicit defaults for every field so inputs are always
+          // controlled from the first render (prevents the
+          // "uncontrolled → controlled" React warning).
+          title: "",
+          description: "",
+          room_type: undefined,
+          price_per_month: undefined,
+          billing_period: "monthly",
+          available_from: "",
           min_stay_months: 1,
           max_occupants: 1,
+          address_line: "",
+          city: "",
+          postcode: "",
+          country: "United Kingdom",
           gender_preference: "no_preference",
+          university_name: "",
           wifi: false,
           parking: false,
           laundry: false,
@@ -199,7 +216,6 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
       }));
 
       setPendingImages((prev) => [...prev, ...previews]);
-      // Reset so the same file can be re-selected if needed
       e.target.value = "";
     },
     [],
@@ -270,7 +286,7 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
   // ─── Submit ───────────────────────────────────────────────────────────────
 
   const onSubmit = async (values: CreateListingValues) => {
-    // 1. Geocode silently — failure is non-fatal, listing saves without coords
+    // Geocode silently — failure is non-fatal
     try {
       const query = [values.address_line, values.city, values.postcode]
         .filter(Boolean)
@@ -284,7 +300,6 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
       // intentionally swallowed
     }
 
-    // Normalise optional string fields — don't store empty strings in the DB
     const normalised = {
       ...values,
       description: values.description || undefined,
@@ -297,7 +312,7 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
         onSuccess: async (newListing) => {
           await uploadPendingImages(newListing.id, 0, true);
           toast.success("Listing created!");
-          router.push("/lister/dashboard");
+          router.push("/lister/listings");
         },
         onError: (error) => {
           toast.error(
@@ -312,15 +327,13 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
         { id: listing.id, updates: normalised },
         {
           onSuccess: async () => {
-            // New images start after existing ones; only the first is a cover
-            // if there are no existing images
             await uploadPendingImages(
               listing.id,
               existingImages.length,
               existingImages.length === 0,
             );
             toast.success("Listing updated!");
-            router.push("/lister/dashboard");
+            router.push("/lister/listings");
           },
           onError: (error) => {
             toast.error(
@@ -400,13 +413,11 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.entries(ROOM_TYPE_LABELS).map(
-                          ([value, label]) => (
-                            <SelectItem key={value} value={value}>
-                              {label}
-                            </SelectItem>
-                          ),
-                        )}
+                        {ROOM_TYPE_OPTIONS.map(({ value, label }) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -414,33 +425,63 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="price_per_month"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Price Per Month (£)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        placeholder="650"
-                        {...field}
-                        value={field.value ?? ""}
-                        onChange={(e) =>
-                          field.onChange(
-                            e.target.value === ""
-                              ? undefined
-                              : e.target.valueAsNumber,
-                          )
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* ── Pricing: amount + billing period side-by-side ── */}
+              <div className="grid grid-cols-2 gap-2">
+                <FormField
+                  control={form.control}
+                  name="price_per_month"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Price (£)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          placeholder="650"
+                          value={field.value ?? ""}
+                          onChange={(e) =>
+                            field.onChange(
+                              e.target.value === ""
+                                ? undefined
+                                : e.target.valueAsNumber,
+                            )
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="billing_period"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Billed</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Period" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {BILLING_PERIOD_OPTIONS.map(({ value, label }) => (
+                            <SelectItem key={value} value={value}>
+                              {label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -469,7 +510,6 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                         type="number"
                         min={1}
                         placeholder="1"
-                        {...field}
                         value={field.value ?? ""}
                         onChange={(e) =>
                           field.onChange(
@@ -496,7 +536,6 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                         type="number"
                         min={1}
                         placeholder="1"
-                        {...field}
                         value={field.value ?? ""}
                         onChange={(e) =>
                           field.onChange(
@@ -614,13 +653,11 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.entries(GENDER_PREF_LABELS).map(
-                          ([value, label]) => (
-                            <SelectItem key={value} value={value}>
-                              {label}
-                            </SelectItem>
-                          ),
-                        )}
+                        {GENDER_PREF_OPTIONS.map(({ value, label }) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -745,7 +782,6 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                       key={img.id}
                       className="relative aspect-square overflow-hidden rounded-md border bg-muted"
                     >
-                      {/* Local blob preview — not from a remote URL, so next/image is overkill here */}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={img.preview}
@@ -804,7 +840,7 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
             type="button"
             variant="outline"
             disabled={isSubmitting}
-            onClick={() => router.push("/lister/dashboard")}
+            onClick={() => router.push("/lister/listings")}
           >
             Cancel
           </Button>
