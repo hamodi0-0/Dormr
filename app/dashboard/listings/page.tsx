@@ -11,15 +11,10 @@ export default async function BrowseListingsPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect("/");
-  }
+  if (!user) redirect("/");
 
-  // Verify student role
   const userType = user.user_metadata?.user_type;
-  if (userType !== "student") {
-    redirect("/lister/dashboard");
-  }
+  if (userType !== "student") redirect("/lister/dashboard");
 
   // Initial page load → Server Component (per data-fetching diagram)
   const { data: listings } = await supabase
@@ -29,9 +24,12 @@ export default async function BrowseListingsPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <>
+    // Outer wrapper: flex col, full height — lets sticky child work correctly
+    <div className="flex flex-col flex-1 min-h-0">
+      {/* Dashboard header stays sticky at top (z-30) */}
       <DashboardHeader title="Browse Listings" />
+      {/* Browse client contains its own sticky filter bar (top-16, z-20) */}
       <ListingsBrowseClient initialListings={(listings as Listing[]) ?? []} />
-    </>
+    </div>
   );
 }
