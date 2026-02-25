@@ -1,0 +1,37 @@
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { ListingsBrowseClient } from "@/components/listings/listings-browse-client";
+import type { Listing } from "@/lib/types/listing";
+import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+
+export default async function BrowseListingsPage() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/");
+  }
+
+  // Verify student role
+  const userType = user.user_metadata?.user_type;
+  if (userType !== "student") {
+    redirect("/lister/dashboard");
+  }
+
+  // Initial page load → Server Component (per data-fetching diagram)
+  const { data: listings } = await supabase
+    .from("listings")
+    .select("*, listing_images(*)")
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+
+  return (
+    <>
+      <DashboardHeader title="Browse Listings" />
+      <ListingsBrowseClient initialListings={(listings as Listing[]) ?? []} />
+    </>
+  );
+}

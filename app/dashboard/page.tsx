@@ -1,53 +1,38 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { DashboardHomeClient } from "@/components/dashboard/dashboard-home-client";
 import type { StudentProfile } from "@/hooks/use-student-profile";
-import type { Listing } from "@/lib/types/listing";
+import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 
-export default async function DashboardPage() {
+export default async function StudentHomePage() {
   const supabase = await createClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/");
-  if (user.user_metadata?.user_type !== "student") redirect("/");
+  if (!user) {
+    redirect("/");
+  }
 
-  // Fetch profile + listings in parallel — both are initial page load data → Server Component
-  const [profileResult, listingsResult] = await Promise.all([
-    supabase.from("student_profiles").select("*").eq("id", user.id).single(),
-    supabase
-      .from("listings")
-      .select(
-        `
-        *,
-        listing_images (
-          id,
-          listing_id,
-          storage_path,
-          public_url,
-          position,
-          is_cover,
-          created_at
-        )
-      `,
-      )
-      .eq("status", "active")
-      .order("created_at", { ascending: false })
-      .limit(50),
-  ]);
+  const userType = user.user_metadata?.user_type;
+  if (userType !== "student") {
+    redirect("/lister/dashboard");
+  }
 
-  if (!profileResult.data?.full_name) redirect("/onboarding");
+  // Fetch profile only — no listings needed on home page
+  const { data: profile } = await supabase
+    .from("student_profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.full_name) redirect("/onboarding");
 
   return (
     <>
-      <DashboardHeader title="Dashboard" />
-      <DashboardHomeClient
-        initialProfile={profileResult.data as StudentProfile}
-        initialListings={(listingsResult.data ?? []) as Listing[]}
-      />
+      <DashboardHeader title="Home" />
+      <DashboardHomeClient initialProfile={profile as StudentProfile} />
     </>
   );
 }

@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
   User,
   MessageSquare,
   Heart,
   Settings,
   LogOut,
   Building2,
+  Home,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
+  { href: "/dashboard/listings", label: "Browse Listings", icon: Building2 },
   {
     href: "/dashboard/chats",
     label: "Chats",
@@ -47,11 +48,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: Heart,
     badge: "Soon",
   },
-  {
-    href: "/dashboard/profile",
-    label: "Profile",
-    icon: User,
-  },
+
   {
     href: "/dashboard/settings",
     label: "Settings",
