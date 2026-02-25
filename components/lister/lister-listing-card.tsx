@@ -39,7 +39,6 @@ import {
 } from "@/lib/types/listing";
 import { useDeleteListingMutation } from "@/hooks/use-delete-listing-mutation";
 import { useUpdateListingMutation } from "@/hooks/use-update-listing-mutation";
-
 interface ListerListingCardProps {
   listing: Listing;
 }
@@ -119,7 +118,7 @@ export function ListerListingCard({ listing }: ListerListingCardProps) {
   return (
     <Card className="group py-0 gap-0 overflow-hidden transition-all duration-200 hover:shadow-md">
       {/* Thumbnail */}
-      <div className="relative h-44 bg-gradient-to-br from-muted to-muted/50 overflow-hidden">
+      <div className="relative h-44 bg-linear-to-br from-muted to-muted/50 overflow-hidden">
         {coverUrl ? (
           <Image
             src={coverUrl}

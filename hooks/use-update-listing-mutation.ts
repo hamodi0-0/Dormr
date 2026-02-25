@@ -84,8 +84,11 @@ export function useUpdateListingMutation() {
       queryClient.setQueryData<Listing[]>(
         ["lister-listings"],
         (old) =>
-          old?.map((l) => (l.id === updatedListing.id ? updatedListing : l)) ??
-          [],
+          old?.map((l) =>
+            l.id === updatedListing.id
+              ? { ...updatedListing, listing_images: l.listing_images }
+              : l,
+          ) ?? [],
       );
     },
   });
