@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { User, GraduationCap, Moon, Sparkles, MapPin } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  User,
+  GraduationCap,
+  Moon,
+  Sparkles,
+  MapPin,
+  LogOut,
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -23,6 +31,8 @@ import { EditableHobbies } from "@/components/dashboard/editable-hobbies";
 import { AvatarUpload } from "@/components/dashboard/avatar-upload";
 import { COMMON_MAJORS } from "@/lib/constants";
 import { useUniversitySearch } from "@/hooks/use-university-search";
+import { Button } from "../ui/button";
+import { createClient } from "@/lib/supabase/client";
 
 // ─── Label maps ─────────────────────────────────────────────────────────────
 
@@ -101,6 +111,7 @@ export function ProfilePageClient({
   userEmail,
 }: ProfilePageClientProps) {
   const { data: profile } = useStudentProfile(initialProfile);
+  const router = useRouter();
   const {
     mutate: updateProfile,
     isPending,
@@ -284,7 +295,9 @@ export function ProfilePageClient({
               currentValue={profile.sleep_schedule}
               config={{ kind: "select", options: SLEEP_OPTIONS }}
               onSave={(v) =>
-                save({ sleep_schedule: v as StudentProfile["sleep_schedule"] })
+                save({
+                  sleep_schedule: v as StudentProfile["sleep_schedule"],
+                })
               }
               isSaving={isSaving("sleep_schedule")}
             />
@@ -333,7 +346,9 @@ export function ProfilePageClient({
               currentValue={profile.study_location}
               config={{ kind: "select", options: STUDY_OPTIONS }}
               onSave={(v) =>
-                save({ study_location: v as StudentProfile["study_location"] })
+                save({
+                  study_location: v as StudentProfile["study_location"],
+                })
               }
               isSaving={isSaving("study_location")}
             />
@@ -405,6 +420,21 @@ export function ProfilePageClient({
           />
         </CardContent>
       </Card>
+      <div className="mt-auto pt-8 pb-2 flex justify-center">
+        <Button
+          className="w-md h-11 text-md font-semibold  bg-red-600 hover:bg-red-700 cursor-pointer"
+          onClick={async () => {
+            const supabase = createClient();
+            await supabase.auth.signOut();
+            toast.success("Logged out successfully");
+            router.push("/");
+            router.refresh();
+          }}
+        >
+          <LogOut className="h-4 w-4 mr-2" />
+          Sign Out
+        </Button>
+      </div>
     </main>
   );
 }

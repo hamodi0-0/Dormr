@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { DashboardHomeClient } from "@/components/dashboard/dashboard-home-client";
 import type { StudentProfile } from "@/hooks/use-student-profile";
-import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 
 export default async function StudentHomePage() {
   const supabase = await createClient();
@@ -11,16 +10,12 @@ export default async function StudentHomePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect("/");
-  }
+  if (!user) redirect("/");
 
   const userType = user.user_metadata?.user_type;
-  if (userType !== "student") {
-    redirect("/lister/dashboard");
-  }
+  if (userType !== "student") redirect("/lister/dashboard");
 
-  // Fetch profile only — no listings needed on home page
+  // Initial page load → Server Component (per data-fetching diagram)
   const { data: profile } = await supabase
     .from("student_profiles")
     .select("*")
@@ -29,10 +24,5 @@ export default async function StudentHomePage() {
 
   if (!profile?.full_name) redirect("/onboarding");
 
-  return (
-    <>
-      <DashboardHeader title="Home" />
-      <DashboardHomeClient initialProfile={profile as StudentProfile} />
-    </>
-  );
+  return <DashboardHomeClient initialProfile={profile as StudentProfile} />;
 }

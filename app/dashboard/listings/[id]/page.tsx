@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
-import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { ListingDetailClient } from "@/components/listings/listing-detail-client";
 import type { Listing } from "@/lib/types/listing";
 
@@ -18,6 +17,7 @@ export default async function ListingDetailPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
   if (!user) redirect("/");
   if (user.user_metadata?.user_type !== "student") redirect("/");
 
@@ -43,10 +43,5 @@ export default async function ListingDetailPage({
 
   if (error || !listing) notFound();
 
-  return (
-    <>
-      <DashboardHeader title="Listing Details" />
-      <ListingDetailClient listing={listing as Listing} />
-    </>
-  );
+  return <ListingDetailClient listing={listing as Listing} />;
 }

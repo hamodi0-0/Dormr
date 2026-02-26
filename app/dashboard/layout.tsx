@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { DashboardSidebar } from "@/components/dashboard/sidebar";
-import { DashboardLayoutClient } from "@/components/dashboard/dashboard-layout-client";
+import { StudentNavHeader } from "@/components/dashboard/student-nav-header";
+import { Footer } from "@/components/footer";
 
 export default async function DashboardLayout({
   children,
@@ -9,18 +9,18 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Auth guard only - no data fetching
   if (!user) redirect("/");
-  if (user.user_metadata?.user_type !== "student") redirect("/");
 
   return (
-    <div className="min-h-screen bg-background flex">
-      <DashboardSidebar />
-      <DashboardLayoutClient>{children}</DashboardLayoutClient>
+    <div className="min-h-screen flex flex-col bg-background">
+      <StudentNavHeader />
+      <div className="flex-1 flex flex-col">{children}</div>
+      <Footer />
     </div>
   );
 }

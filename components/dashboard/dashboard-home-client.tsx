@@ -1,15 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import {
-  Search,
-  SlidersHorizontal,
-  Home,
-  Sparkles,
-  ArrowRight,
-  BookOpen,
-  Building2,
-} from "lucide-react";
+import { Search, SlidersHorizontal, Sparkles, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";

@@ -1,4 +1,3 @@
-import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ProfilePageClient } from "@/components/dashboard/profile-page-client";
@@ -13,7 +12,7 @@ export default async function ProfilePage() {
 
   if (!user) redirect("/");
 
-  // Fetch initial data on server
+  // Initial page load → Server Component (per data-fetching diagram)
   const { data: profile } = await supabase
     .from("student_profiles")
     .select("*")
@@ -23,12 +22,9 @@ export default async function ProfilePage() {
   if (!profile) redirect("/onboarding");
 
   return (
-    <>
-      <DashboardHeader title="Profile" />
-      <ProfilePageClient
-        initialProfile={profile as StudentProfile}
-        userEmail={user.email ?? ""}
-      />
-    </>
+    <ProfilePageClient
+      initialProfile={profile as StudentProfile}
+      userEmail={user.email ?? ""}
+    />
   );
 }
