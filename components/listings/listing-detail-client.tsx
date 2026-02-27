@@ -22,7 +22,6 @@ import {
   Images,
   Shirt,
   Shield,
-  CheckCircle2,
   GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -35,6 +34,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import dynamic from "next/dynamic";
 import type { Listing, ListingImage } from "@/lib/types/listing";
 import {
   ROOM_TYPE_LABELS,
@@ -42,13 +42,23 @@ import {
   GENDER_PREFERENCE_LABELS,
 } from "@/lib/types/listing";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 interface ListingDetailClientProps {
   listing: Listing;
 }
-
-// ─── Amenity Config ───────────────────────────────────────────────────────────
+const ListingDetailMap = dynamic(
+  () =>
+    import("@/components/listings/listing-detail-map").then(
+      (m) => m.ListingDetailMap,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-muted/30 rounded-lg">
+        <span className="text-sm text-muted-foreground">Loading map…</span>
+      </div>
+    ),
+  },
+);
 
 const AMENITY_CONFIG = [
   {
@@ -310,11 +320,6 @@ export function ListingDetailClient({ listing }: ListingDetailClientProps) {
 
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`;
 
-  const hasMap = listing.latitude && listing.longitude;
-  const mapSrc = hasMap
-    ? `https://www.openstreetmap.org/export/embed.html?bbox=${listing.longitude! - 0.015},${listing.latitude! - 0.008},${listing.longitude! + 0.015},${listing.latitude! + 0.008}&layer=mapnik&marker=${listing.latitude},${listing.longitude}`
-    : null;
-
   const shouldTruncateDesc =
     listing.description && listing.description.length > 300;
 
@@ -518,14 +523,17 @@ export function ListingDetailClient({ listing }: ListingDetailClientProps) {
             <CardHeader className="pt-5 pb-0 px-5">
               <CardTitle className="text-sm font-semibold">Location</CardTitle>
             </CardHeader>
-            <CardContent className="pt-4 pb-5 px-5 space-y-3">
-              {mapSrc ? (
-                <div className="rounded-lg overflow-hidden border border-border h-48">
-                  <iframe
-                    src={mapSrc}
-                    className="w-full h-full"
-                    loading="lazy"
-                    title="Property location map"
+            <CardContent className=" pb-5 px-5 space-y-3">
+              {listing.latitude && listing.longitude ? (
+                <div className="rounded-lg overflow-hidden border border-border h-54">
+                  <ListingDetailMap
+                    key={`map-${listing.id}`}
+                    latitude={listing.latitude}
+                    longitude={listing.longitude}
+                    title={listing.title}
+                    address={[listing.address_line, listing.city]
+                      .filter(Boolean)
+                      .join(", ")}
                   />
                 </div>
               ) : null}

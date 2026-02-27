@@ -420,9 +420,9 @@ export function ProfilePageClient({
           />
         </CardContent>
       </Card>
-      <div className="mt-auto pt-8 pb-2 flex justify-center">
+      <div className="mt-auto  pt-12 pb-8 flex justify-center">
         <Button
-          className="w-md h-11 text-md font-semibold  bg-red-600 hover:bg-red-700 cursor-pointer"
+          className="w-md h-11 text-md font-bold cursor-pointer"
           onClick={async () => {
             const supabase = createClient();
             await supabase.auth.signOut();
@@ -431,7 +431,7 @@ export function ProfilePageClient({
             router.refresh();
           }}
         >
-          <LogOut className="h-4 w-4 mr-2" />
+          <LogOut className="h-4 w-4 mr-2 font-bold" />
           Sign Out
         </Button>
       </div>

@@ -5,7 +5,16 @@ import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Loader2, Upload, X, ImageIcon } from "lucide-react";
+import dynamic from "next/dynamic";
+import {
+  Loader2,
+  Upload,
+  X,
+  ImageIcon,
+  MapPin,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -40,15 +49,32 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// ─── Dynamic Leaflet import (no SSR) ─────────────────────────────────────────
+
+const LocationPickerMap = dynamic(
+  () =>
+    import("@/components/listings/location-picker-map").then(
+      (m) => m.LocationPickerMap,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full bg-muted animate-pulse rounded-md flex items-center justify-center">
+        <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+      </div>
+    ),
+  },
+);
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ListingFormProps {
   mode: "create" | "edit";
-  listing?: Listing; // required when mode === "edit"
+  listing?: Listing;
 }
 
 interface PendingImage {
-  id: string; // client-side UUID for stable keys
+  id: string;
   file: File;
   preview: string;
 }
@@ -142,6 +168,10 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
   );
   const [deletingImageId, setDeletingImageId] = useState<string | null>(null);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const [isGeocodingAddress, setIsGeocodingAddress] = useState(false);
+  const [geocodeStatus, setGeocodeStatus] = useState<
+    "idle" | "success" | "failed"
+  >("idle");
 
   const isSubmitting =
     createMutation.isPending || updateMutation.isPending || isUploadingImages;
@@ -176,9 +206,6 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
           longitude: listing.longitude ?? undefined,
         }
       : {
-          // Provide explicit defaults for every field so inputs are always
-          // controlled from the first render (prevents the
-          // "uncontrolled → controlled" React warning).
           title: "",
           description: "",
           room_type: undefined,
@@ -202,19 +229,63 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
         },
   });
 
+  // Watch lat/lng so the map reacts to geocoding results
+  const latitude = form.watch("latitude");
+  const longitude = form.watch("longitude");
+  const hasCoords =
+    latitude != null &&
+    longitude != null &&
+    !isNaN(latitude) &&
+    !isNaN(longitude);
+
+  // ─── Geocode on address blur ──────────────────────────────────────────────
+
+  const handleAddressBlur = useCallback(async () => {
+    const { address_line, city, postcode } = form.getValues();
+    const query = [address_line, city, postcode].filter(Boolean).join(", ");
+    if (query.length < 5) return;
+
+    setIsGeocodingAddress(true);
+    setGeocodeStatus("idle");
+
+    try {
+      const coords = await geocodeAddress(query);
+      if (coords) {
+        form.setValue("latitude", coords.lat);
+        form.setValue("longitude", coords.lng);
+        setGeocodeStatus("success");
+      } else {
+        setGeocodeStatus("failed");
+      }
+    } catch {
+      setGeocodeStatus("failed");
+    } finally {
+      setIsGeocodingAddress(false);
+    }
+  }, [form]);
+
+  // ─── Map location change (click / drag) ──────────────────────────────────
+
+  const handleMapLocationChange = useCallback(
+    (lat: number, lng: number) => {
+      form.setValue("latitude", lat);
+      form.setValue("longitude", lng);
+      setGeocodeStatus("success");
+    },
+    [form],
+  );
+
   // ─── Image Handlers ───────────────────────────────────────────────────────
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files ?? []);
       const validFiles = files.filter((f) => f.type.startsWith("image/"));
-
       const previews: PendingImage[] = validFiles.map((file) => ({
         id: crypto.randomUUID(),
         file,
         preview: URL.createObjectURL(file),
       }));
-
       setPendingImages((prev) => [...prev, ...previews]);
       e.target.value = "";
     },
@@ -251,18 +322,15 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
     firstIsCover: boolean,
   ) => {
     if (pendingImages.length === 0) return;
-
     setIsUploadingImages(true);
     const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
-
     if (!user) {
       setIsUploadingImages(false);
       return;
     }
-
     try {
       for (let i = 0; i < pendingImages.length; i++) {
         await uploadImageToStorage(
@@ -286,18 +354,20 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
   // ─── Submit ───────────────────────────────────────────────────────────────
 
   const onSubmit = async (values: CreateListingValues) => {
-    // Geocode silently — failure is non-fatal
-    try {
-      const query = [values.address_line, values.city, values.postcode]
-        .filter(Boolean)
-        .join(", ");
-      const coords = await geocodeAddress(query);
-      if (coords) {
-        values.latitude = coords.lat;
-        values.longitude = coords.lng;
+    // Geocode silently on submit if no coords yet
+    if (!values.latitude || !values.longitude) {
+      try {
+        const query = [values.address_line, values.city, values.postcode]
+          .filter(Boolean)
+          .join(", ");
+        const coords = await geocodeAddress(query);
+        if (coords) {
+          values.latitude = coords.lat;
+          values.longitude = coords.lng;
+        }
+      } catch {
+        // intentionally swallowed
       }
-    } catch {
-      // intentionally swallowed
     }
 
     const normalised = {
@@ -322,7 +392,6 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
       });
     } else {
       if (!listing) return;
-
       updateMutation.mutate(
         { id: listing.id, updates: normalised },
         {
@@ -425,7 +494,6 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                 )}
               />
 
-              {/* ── Pricing: amount + billing period side-by-side ── */}
               <div className="grid grid-cols-2 gap-2">
                 <FormField
                   control={form.control}
@@ -567,7 +635,11 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                 <FormItem>
                   <FormLabel>Street Address</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. 12 Oak Street" {...field} />
+                    <Input
+                      placeholder="e.g. 12 Oak Street"
+                      {...field}
+                      onBlur={handleAddressBlur}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -582,7 +654,11 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                   <FormItem>
                     <FormLabel>City</FormLabel>
                     <FormControl>
-                      <Input placeholder="Manchester" {...field} />
+                      <Input
+                        placeholder="Manchester"
+                        {...field}
+                        onBlur={handleAddressBlur}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -601,7 +677,11 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                       </span>
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="M1 1AE" {...field} />
+                      <Input
+                        placeholder="M1 1AE"
+                        {...field}
+                        onBlur={handleAddressBlur}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -623,9 +703,52 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
               />
             </div>
 
+            {/* ── Location Pin Status ── */}
+            <div className="flex items-center gap-2 text-xs">
+              {isGeocodingAddress ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                  <span className="text-muted-foreground">
+                    Finding location…
+                  </span>
+                </>
+              ) : geocodeStatus === "success" && hasCoords ? (
+                <>
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                  <span className="text-emerald-600 dark:text-emerald-400">
+                    Location pinned — drag the marker or click to adjust
+                  </span>
+                </>
+              ) : geocodeStatus === "failed" ? (
+                <>
+                  <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                  <span className="text-amber-600 dark:text-amber-400">
+                    Address not found — click the map to pin manually
+                  </span>
+                </>
+              ) : (
+                <>
+                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-muted-foreground">
+                    Enter your address above or click the map to pin the exact
+                    location
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* ── Interactive Map Picker ── */}
+            <div className="h-72 w-full rounded-lg overflow-hidden border border-border">
+              <LocationPickerMap
+                latitude={latitude}
+                longitude={longitude}
+                onLocationChange={handleMapLocationChange}
+              />
+            </div>
+
             <p className="text-xs text-muted-foreground">
-              Your exact address is used to generate a map pin for students.
-              Only the general area is shown publicly.
+              Only the general area is shown publicly — your exact pin is used
+              for the detail page map.
             </p>
           </CardContent>
         </Card>
@@ -727,7 +850,6 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
             <CardTitle className="text-base">Photos</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Existing images (edit mode only) */}
             {existingImages.length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">Current photos</p>
@@ -768,7 +890,6 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
               </div>
             )}
 
-            {/* Pending previews */}
             {pendingImages.length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">
@@ -807,7 +928,6 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
               </div>
             )}
 
-            {/* Drop zone / file picker */}
             <label className="group flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-muted-foreground/25 px-4 py-8 text-muted-foreground transition-colors hover:border-muted-foreground/50 hover:text-foreground">
               <Upload className="h-6 w-6 transition-transform group-hover:scale-105" />
               <span className="text-sm font-medium">

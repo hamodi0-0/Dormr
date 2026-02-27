@@ -60,10 +60,6 @@ export function StudentNavHeader() {
     };
   }, [mobileOpen]);
 
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
-
   const initials = profile?.full_name
     ? profile.full_name
         .split(" ")
