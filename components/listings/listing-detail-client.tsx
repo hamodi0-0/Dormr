@@ -597,7 +597,6 @@ export function ListingDetailClient({ listing }: ListingDetailClientProps) {
 
               <div className="border-t border-border/50" />
 
-              {/* Contact buttons — styled like inspiration's Call/WhatsApp */}
               <div className="space-y-2.5">
                 {/* Call button */}
                 <Button
@@ -608,14 +607,13 @@ export function ListingDetailClient({ listing }: ListingDetailClientProps) {
                   Call Lister
                 </Button>
 
-                {/* WhatsApp-style button */}
                 <Button
                   variant="outline"
-                  className="w-full gap-2 border-[#25D366] text-[#25D366] hover:bg-[#25D366]/10 h-10"
+                  className="w-full hover:text-chart-4 gap-2 h-10"
                   disabled
                 >
                   <MessageCircle className="h-4 w-4" />
-                  WhatsApp
+                  Message Lister
                 </Button>
               </div>
 

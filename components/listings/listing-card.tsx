@@ -299,26 +299,8 @@ export function ListingCard({ listing, className }: ListingCardProps) {
                   className="h-8 gap-1.5 text-xs"
                   disabled
                 >
-                  <Mail className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Email</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Contact coming soon</TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={cn(
-                    "h-8 gap-1.5 text-xs",
-                    "border-[#25D366]/50 text-[#25D366] hover:bg-[#25D366]/10",
-                  )}
-                  disabled
-                >
                   <MessageCircle className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">WhatsApp</span>
+                  <span className="hidden sm:inline">Chat</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Contact coming soon</TooltipContent>
