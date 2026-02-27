@@ -155,3 +155,50 @@ export function getCoverImageUrl(listing: Listing): string | null {
 export function isListingAvailable(listing: Listing): boolean {
   return listing.status === "active";
 }
+
+export type TenantRequestStatus = "pending" | "accepted" | "rejected";
+
+export interface TenantRequest {
+  id: string;
+  listing_id: string;
+  requester_id: string;
+  status: TenantRequestStatus;
+  message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ListingTenant {
+  id: string;
+  listing_id: string;
+  user_id: string;
+  added_at: string;
+}
+
+export type NotificationType =
+  | "tenant_request_received"
+  | "request_accepted"
+  | "request_rejected";
+
+export interface NotificationMetadata {
+  listing_id: string;
+  request_id: string;
+  listing_title: string;
+  requester_name?: string;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  metadata: NotificationMetadata | null;
+  read: boolean;
+  created_at: string;
+}
+
+// Extend the existing Listing type to include tenant count
+export interface ListingWithTenantCount extends Listing {
+  tenant_count: number; // derived from listing_tenants aggregate
+}
