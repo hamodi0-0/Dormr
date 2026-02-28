@@ -8,21 +8,17 @@ import {
   MapPin,
   Users,
   Phone,
-  Mail,
   MessageCircle,
   Home,
   Clock,
   ChevronLeft,
   ChevronRight,
   Camera,
-  Eye,
   Heart,
   Calendar,
-  ArrowLeft,
-  ArrowRightCircle,
   ArrowRight,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -84,7 +80,7 @@ function ImageCarousel({ images, listingId, title }: ImageCarouselProps) {
   if (sorted.length === 0) {
     return (
       <Link href={`/dashboard/listings/${listingId}`} className="block h-full">
-        <div className="w-full h-full bg-gradient-to-br from-muted to-muted/40 flex items-center justify-center">
+        <div className="w-full h-full bg-linear-to-br from-muted to-muted/40 flex items-center justify-center">
           <Home className="h-10 w-10 text-muted-foreground/20" />
         </div>
       </Link>

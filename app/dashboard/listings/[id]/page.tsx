@@ -7,7 +7,6 @@ interface ListingDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
-// Initial page load data → Server Component
 export default async function ListingDetailPage({
   params,
 }: ListingDetailPageProps) {
@@ -21,27 +20,40 @@ export default async function ListingDetailPage({
   if (!user) redirect("/");
   if (user.user_metadata?.user_type !== "student") redirect("/");
 
-  const { data: listing, error } = await supabase
-    .from("listings")
-    .select(
-      `
-      *,
-      listing_images (
-        id,
-        listing_id,
-        storage_path,
-        public_url,
-        position,
-        is_cover,
-        created_at
+  const [listingResult, tenantCountResult] = await Promise.all([
+    supabase
+      .from("listings")
+      .select(
+        `
+        *,
+        listing_images (
+          id,
+          listing_id,
+          storage_path,
+          public_url,
+          position,
+          is_cover,
+          created_at
+        )
+      `,
       )
-    `,
-    )
-    .eq("id", id)
-    .eq("status", "active")
-    .single();
+      .eq("id", id)
+      .eq("status", "active")
+      .single(),
 
-  if (error || !listing) notFound();
+    supabase
+      .from("listing_tenants")
+      .select("*", { count: "exact", head: true })
+      .eq("listing_id", id),
+  ]);
 
-  return <ListingDetailClient listing={listing as Listing} />;
+  if (listingResult.error || !listingResult.data) notFound();
+
+  return (
+    <ListingDetailClient
+      listing={listingResult.data as Listing}
+      tenantCount={tenantCountResult.count ?? 0}
+      userId={user.id}
+    />
+  );
 }

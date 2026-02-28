@@ -12,6 +12,7 @@ import type { Notification, NotificationType } from "@/lib/types/listing";
 interface NotificationItemProps {
   notification: Notification;
   userId: string;
+  userRole: "student" | "lister";
 }
 
 const ICON_MAP: Record<
@@ -29,9 +30,22 @@ const ICON_COLOR_MAP: Record<NotificationType, string> = {
   request_rejected: "text-muted-foreground",
 };
 
+function getNotificationHref(
+  notification: Notification,
+  userRole: "student" | "lister",
+): string | null {
+  const listingId = notification.metadata?.listing_id;
+  if (!listingId) return null;
+  if (userRole === "lister") {
+    return `/lister/listings/${listingId}/tenants`;
+  }
+  return `/dashboard/listings/${listingId}`;
+}
+
 export function NotificationItem({
   notification,
   userId,
+  userRole,
 }: NotificationItemProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -42,8 +56,7 @@ export function NotificationItem({
   const postedAgo = formatDistanceToNow(new Date(notification.created_at), {
     addSuffix: true,
   });
-
-  const listingId = notification.metadata?.listing_id;
+  const href = getNotificationHref(notification, userRole);
 
   const handleClick = () => {
     startTransition(async () => {
@@ -51,9 +64,8 @@ export function NotificationItem({
         await markNotificationRead(notification.id);
         queryClient.invalidateQueries({ queryKey: ["notifications", userId] });
       }
-
-      if (listingId) {
-        router.push(`/dashboard/listings/${listingId}`);
+      if (href) {
+        router.push(href);
       }
     });
   };

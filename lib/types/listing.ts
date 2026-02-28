@@ -47,6 +47,9 @@ export interface Listing {
   min_stay_months: number;
   max_occupants: number;
 
+  //Contact
+  contact_phone: string | null;
+
   // Location
   address_line: string;
   city: string;
