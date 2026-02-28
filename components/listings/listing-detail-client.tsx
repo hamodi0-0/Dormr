@@ -41,10 +41,17 @@ import {
   BILLING_PERIOD_SUFFIX,
   GENDER_PREFERENCE_LABELS,
 } from "@/lib/types/listing";
+import { AnonymousTenantCard } from "@/components/tenants/anonymous-tenant-card";
+import { NoTenantsPrompt } from "@/components/tenants/no-tenants-prompt";
+import { TenantRequestButton } from "@/components/tenants/tenant-request-button";
+import { TenantCountBadge } from "@/components/tenants/tenant-count-badge";
 
 interface ListingDetailClientProps {
   listing: Listing;
+  tenantCount: number;
+  userId: string;
 }
+
 const ListingDetailMap = dynamic(
   () =>
     import("@/components/listings/listing-detail-map").then(
@@ -61,36 +68,12 @@ const ListingDetailMap = dynamic(
 );
 
 const AMENITY_CONFIG = [
-  {
-    key: "furnished" as const,
-    label: "Furnished",
-    icon: Home,
-  },
-  {
-    key: "wifi" as const,
-    label: "WiFi Included",
-    icon: Wifi,
-  },
-  {
-    key: "parking" as const,
-    label: "Covered Parking",
-    icon: Car,
-  },
-  {
-    key: "laundry" as const,
-    label: "Laundry",
-    icon: Shirt,
-  },
-  {
-    key: "gym" as const,
-    label: "Gym Access",
-    icon: Dumbbell,
-  },
-  {
-    key: "bills_included" as const,
-    label: "Bills Included",
-    icon: Zap,
-  },
+  { key: "furnished" as const, label: "Furnished", icon: Home },
+  { key: "wifi" as const, label: "WiFi Included", icon: Wifi },
+  { key: "parking" as const, label: "Covered Parking", icon: Car },
+  { key: "laundry" as const, label: "Laundry", icon: Shirt },
+  { key: "gym" as const, label: "Gym Access", icon: Dumbbell },
+  { key: "bills_included" as const, label: "Bills Included", icon: Zap },
 ] satisfies {
   key: keyof Listing;
   label: string;
@@ -127,9 +110,7 @@ function ImageGallery({ images }: { images: ListingImage[] }) {
 
   return (
     <>
-      {/* Grid layout */}
       <div className="grid grid-cols-3 gap-2 h-64 sm:h-80 lg:h-[420px] rounded-xl overflow-hidden">
-        {/* Main large image — takes 2/3 width */}
         <div
           className="col-span-2 relative cursor-pointer group overflow-hidden"
           onClick={() => {
@@ -148,7 +129,6 @@ function ImageGallery({ images }: { images: ListingImage[] }) {
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
         </div>
 
-        {/* Right column — 2 stacked thumbnails */}
         <div className="flex flex-col gap-2">
           {thumbnails.map((img, idx) => (
             <div
@@ -167,8 +147,6 @@ function ImageGallery({ images }: { images: ListingImage[] }) {
                 sizes="(max-width: 640px) 33vw, (max-width: 1024px) 25vw, 220px"
               />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
-
-              {/* "See all" overlay on last thumbnail */}
               {idx === 1 && hasMore && (
                 <div
                   className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-1"
@@ -186,8 +164,6 @@ function ImageGallery({ images }: { images: ListingImage[] }) {
               )}
             </div>
           ))}
-
-          {/* If only 1 thumbnail, fill with a see-all button */}
           {thumbnails.length === 0 && images.length > 1 && (
             <div
               className="flex-1 relative cursor-pointer bg-muted flex items-center justify-center"
@@ -201,7 +177,6 @@ function ImageGallery({ images }: { images: ListingImage[] }) {
           )}
         </div>
 
-        {/* Photo count badge */}
         <div className="absolute bottom-3 right-3 z-10 pointer-events-none">
           <button
             className="pointer-events-auto flex items-center gap-1.5 px-2.5 py-1 bg-black/60 text-white text-xs font-medium rounded-full backdrop-blur-sm hover:bg-black/75 transition-colors"
@@ -216,7 +191,6 @@ function ImageGallery({ images }: { images: ListingImage[] }) {
         </div>
       </div>
 
-      {/* Fullscreen gallery dialog */}
       <Dialog open={galleryOpen} onOpenChange={setGalleryOpen}>
         <DialogContent className="max-w-4xl w-full p-0 gap-0 overflow-hidden bg-background">
           <DialogHeader className="px-4 py-3 border-b border-border">
@@ -224,8 +198,6 @@ function ImageGallery({ images }: { images: ListingImage[] }) {
               {activeIdx + 1} / {sorted.length}
             </DialogTitle>
           </DialogHeader>
-
-          {/* Main image */}
           <div className="relative h-[60vh] bg-black">
             <Image
               src={sorted[activeIdx].public_url}
@@ -235,8 +207,6 @@ function ImageGallery({ images }: { images: ListingImage[] }) {
               sizes="90vw"
             />
           </div>
-
-          {/* Thumbnail strip */}
           {sorted.length > 1 && (
             <div className="flex gap-2 p-3 overflow-x-auto bg-muted/30">
               {sorted.map((img, idx) => (
@@ -267,7 +237,7 @@ function ImageGallery({ images }: { images: ListingImage[] }) {
   );
 }
 
-// ─── Property Stat ────────────────────────────────────────────────────────────
+// ─── Stat Badge ───────────────────────────────────────────────────────────────
 
 function StatBadge({
   icon: Icon,
@@ -291,13 +261,70 @@ function StatBadge({
   );
 }
 
+// ─── Tenants Section ──────────────────────────────────────────────────────────
+
+function TenantsSection({
+  listing,
+  tenantCount,
+  userId,
+}: {
+  listing: Listing;
+  tenantCount: number;
+  userId: string;
+}) {
+  const isMultiOccupant = listing.max_occupants > 1;
+
+  // Single-occupant listings don't have tenant/compatibility features
+  if (!isMultiOccupant) return null;
+
+  return (
+    <Card className="py-0">
+      <CardHeader className="pt-5 pb-0 px-5">
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            Tenants
+          </CardTitle>
+          <TenantCountBadge
+            tenantCount={tenantCount}
+            maxOccupants={listing.max_occupants}
+          />
+        </div>
+      </CardHeader>
+
+      <CardContent className="px-5 pb-5 pt-4 space-y-4">
+        {/* Anonymous tenant cards or empty state */}
+        {tenantCount > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {Array.from({ length: tenantCount }).map((_, i) => (
+              <AnonymousTenantCard key={i} index={i + 1} />
+            ))}
+          </div>
+        ) : (
+          <NoTenantsPrompt variant="student" />
+        )}
+
+        {/* Tenant request button — hidden if listing is full */}
+        {tenantCount < listing.max_occupants && (
+          <div className="pt-1">
+            <TenantRequestButton listingId={listing.id} userId={userId} />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function ListingDetailClient({ listing }: ListingDetailClientProps) {
+export function ListingDetailClient({
+  listing,
+  tenantCount,
+  userId,
+}: ListingDetailClientProps) {
   const [descExpanded, setDescExpanded] = useState(false);
 
   const images = listing.listing_images ?? [];
-
   const priceSuffix = BILLING_PERIOD_SUFFIX[listing.billing_period] ?? "/mo";
 
   const availableDate = new Date(listing.available_from).toLocaleDateString(
@@ -339,26 +366,24 @@ export function ListingDetailClient({ listing }: ListingDetailClientProps) {
         Back to listings
       </Link>
 
-      {/* ── Image Gallery ── */}
+      {/* Image Gallery */}
       <div className="relative mb-6">
         <ImageGallery images={images} />
       </div>
 
-      {/* ── Main layout: content + sticky sidebar ── */}
+      {/* Main layout: content + sticky sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 xl:gap-8">
-        {/* ────── LEFT: Main Content ────── */}
+        {/* ── LEFT ── */}
         <div className="space-y-5 min-w-0">
           {/* Price + quick stats */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl sm:text-4xl font-serif font-semibold text-foreground">
-                  £{listing.price_per_month.toLocaleString()}
-                </span>
-                <span className="text-base text-muted-foreground font-normal">
-                  {priceSuffix}
-                </span>
-              </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-3xl sm:text-4xl font-serif font-semibold text-foreground">
+                £{listing.price_per_month.toLocaleString()}
+              </span>
+              <span className="text-base text-muted-foreground font-normal">
+                {priceSuffix}
+              </span>
             </div>
             <div className="flex flex-wrap gap-4">
               <StatBadge
@@ -401,7 +426,7 @@ export function ListingDetailClient({ listing }: ListingDetailClientProps) {
           <div className="border-t border-border/50" />
 
           {/* Description */}
-          {listing.description ? (
+          {listing.description && (
             <div>
               <h2 className="text-sm font-semibold text-foreground mb-2">
                 About this listing
@@ -428,9 +453,9 @@ export function ListingDetailClient({ listing }: ListingDetailClientProps) {
                 </button>
               )}
             </div>
-          ) : null}
+          )}
 
-          {/* ── Property Details ── */}
+          {/* Property Details */}
           <Card className="py-0">
             <CardHeader className="pt-5 pb-0 px-5">
               <CardTitle className="text-sm font-semibold">
@@ -438,7 +463,7 @@ export function ListingDetailClient({ listing }: ListingDetailClientProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4 pb-5 px-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 divide-y sm:divide-y-0 sm:divide-x-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 divide-y sm:divide-y-0">
                 {[
                   {
                     label: "Property Type",
@@ -448,10 +473,7 @@ export function ListingDetailClient({ listing }: ListingDetailClientProps) {
                     label: "Max Occupants",
                     value: String(listing.max_occupants),
                   },
-                  {
-                    label: "Available From",
-                    value: availableDate,
-                  },
+                  { label: "Available From", value: availableDate },
                   {
                     label: "Min Stay",
                     value: `${listing.min_stay_months} month${listing.min_stay_months !== 1 ? "s" : ""}`,
@@ -490,7 +512,7 @@ export function ListingDetailClient({ listing }: ListingDetailClientProps) {
             </CardContent>
           </Card>
 
-          {/* ── Amenities ── */}
+          {/* Amenities */}
           {activeAmenities.length > 0 && (
             <Card className="py-0">
               <CardHeader className="pt-5 pb-0 px-5">
@@ -518,12 +540,19 @@ export function ListingDetailClient({ listing }: ListingDetailClientProps) {
             </Card>
           )}
 
-          {/* ── Location ── */}
+          {/* ── Tenants section (multi-occupant listings only) ── */}
+          <TenantsSection
+            listing={listing}
+            tenantCount={tenantCount}
+            userId={userId}
+          />
+
+          {/* Location */}
           <Card className="py-0">
             <CardHeader className="pt-5 pb-0 px-5">
               <CardTitle className="text-sm font-semibold">Location</CardTitle>
             </CardHeader>
-            <CardContent className=" pb-5 px-5 space-y-3">
+            <CardContent className="pb-5 px-5 space-y-3">
               {listing.latitude && listing.longitude ? (
                 <div className="rounded-lg overflow-hidden border border-border h-54">
                   <ListingDetailMap
@@ -566,7 +595,7 @@ export function ListingDetailClient({ listing }: ListingDetailClientProps) {
           </Card>
         </div>
 
-        {/* ────── RIGHT: Sticky Sidebar ────── */}
+        {/* ── RIGHT: Sticky Sidebar ── */}
         <div className="lg:sticky lg:top-20 self-start space-y-4">
           {/* Price card */}
           <Card className="py-0">
@@ -598,7 +627,6 @@ export function ListingDetailClient({ listing }: ListingDetailClientProps) {
               <div className="border-t border-border/50" />
 
               <div className="space-y-2.5">
-                {/* Call button */}
                 <Button
                   className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground h-10"
                   disabled
@@ -606,10 +634,9 @@ export function ListingDetailClient({ listing }: ListingDetailClientProps) {
                   <Phone className="h-4 w-4" />
                   Call Lister
                 </Button>
-
                 <Button
                   variant="outline"
-                  className="w-full hover:text-chart-4 gap-2 h-10"
+                  className="w-full gap-2 h-10"
                   disabled
                 >
                   <MessageCircle className="h-4 w-4" />
@@ -617,12 +644,10 @@ export function ListingDetailClient({ listing }: ListingDetailClientProps) {
                 </Button>
               </div>
 
-              {/* Coming soon note */}
               <p className="text-center text-xs text-muted-foreground bg-muted/50 rounded-md py-2 px-3">
                 Direct contact coming soon. Check back shortly!
               </p>
 
-              {/* Mini details */}
               <div className="space-y-2 pt-1">
                 {[
                   {

@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-// ─── Schema ───────────────────────────────────────────────────────────────────
-
 export const createListingSchema = z.object({
   // Basic info
   title: z
@@ -33,13 +31,16 @@ export const createListingSchema = z.object({
     .min(1, "Must allow at least 1 occupant")
     .default(1),
 
+  // Contact — per-listing, optional
+  contact_phone: z.string().max(30).optional(),
+
   // Location
   address_line: z.string().min(3, "Please enter a street address"),
   city: z.string().min(2, "Please enter a city"),
   postcode: z.string().optional(),
   country: z.string().default("United Kingdom"),
 
-  // Geocoded coordinates — set programmatically, never shown as form fields
+  // Geocoded coordinates
   latitude: z.number().optional(),
   longitude: z.number().optional(),
 
@@ -49,7 +50,7 @@ export const createListingSchema = z.object({
     .default("no_preference"),
   university_name: z.string().optional(),
 
-  // Amenities — flat booleans, each is a top-level column in the DB
+  // Amenities
   wifi: z.boolean().default(false),
   parking: z.boolean().default(false),
   laundry: z.boolean().default(false),
@@ -57,7 +58,5 @@ export const createListingSchema = z.object({
   bills_included: z.boolean().default(false),
   furnished: z.boolean().default(false),
 });
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 export type CreateListingValues = z.infer<typeof createListingSchema>;

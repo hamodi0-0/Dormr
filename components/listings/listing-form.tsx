@@ -14,6 +14,7 @@ import {
   MapPin,
   CheckCircle2,
   AlertCircle,
+  Phone,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -192,6 +193,7 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
           max_occupants: listing.max_occupants,
           address_line: listing.address_line,
           city: listing.city,
+          contact_phone: listing.contact_phone ?? "",
           postcode: listing.postcode ?? "",
           country: listing.country,
           gender_preference: listing.gender_preference,
@@ -216,6 +218,7 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
           max_occupants: 1,
           address_line: "",
           city: "",
+          contact_phone: "",
           postcode: "",
           country: "United Kingdom",
           gender_preference: "no_preference",
@@ -460,6 +463,34 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                       {...field}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="contact_phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                    Contact Phone{" "}
+                    <span className="text-xs text-muted-foreground font-normal">
+                      (optional)
+                    </span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="tel"
+                      placeholder="+44 7700 900000"
+                      {...field}
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    Shown to confirmed tenants only. Use a number specific to
+                    this listing if preferred.
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}

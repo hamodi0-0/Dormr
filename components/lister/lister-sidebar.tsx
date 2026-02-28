@@ -9,6 +9,7 @@ import {
   User,
   LogOut,
   Building2,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useListerProfile } from "@/hooks/use-lister-profile";
+import { useUnreadNotificationCount } from "@/hooks/use-notifications";
 
 interface NavItem {
   href: string;
@@ -38,12 +40,16 @@ const NAV_ITEMS: NavItem[] = [
     href: "/lister/dashboard",
     label: "Dashboard",
     icon: LayoutDashboard,
-    badge: "Soon",
   },
   {
     href: "/lister/listings",
     label: "My Listings",
     icon: Home,
+  },
+  {
+    href: "/lister/notifications",
+    label: "Notifications",
+    icon: Bell,
   },
   {
     href: "/lister/chats",
@@ -65,6 +71,7 @@ export function ListerSidebar() {
   const router = useRouter();
 
   const { data: profile, isLoading } = useListerProfile();
+  const unreadCount = useUnreadNotificationCount(profile?.id ?? null);
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -128,6 +135,7 @@ export function ListerSidebar() {
                   ? pathname === "/lister/dashboard"
                   : pathname.startsWith(item.href);
               const Icon = item.icon;
+              const isNotifications = item.href === "/lister/notifications";
 
               const linkContent = (
                 <Link
@@ -143,26 +151,39 @@ export function ListerSidebar() {
                   {isActive && (
                     <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary rounded-r-full" />
                   )}
-                  <Icon
-                    className={cn(
-                      "shrink-0 transition-colors",
-                      isOpen ? "h-4 w-4" : "h-5 w-5",
-                      isActive
-                        ? "text-primary"
-                        : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/80",
+                  <span className="relative shrink-0">
+                    <Icon
+                      className={cn(
+                        "transition-colors",
+                        isOpen ? "h-4 w-4" : "h-5 w-5",
+                        isActive
+                          ? "text-primary"
+                          : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/80",
+                      )}
+                    />
+                    {/* Unread dot on collapsed bell */}
+                    {isNotifications && unreadCount > 0 && !isOpen && (
+                      <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-destructive text-[8px] font-bold text-white flex items-center justify-center leading-none">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
                     )}
-                  />
+                  </span>
                   {isOpen && (
                     <>
                       <span className="flex-1 truncate">{item.label}</span>
-                      {item.badge && (
+                      {/* Unread count badge for notifications */}
+                      {isNotifications && unreadCount > 0 ? (
+                        <span className="ml-auto h-5 min-w-5 rounded-full bg-destructive px-1.5 text-[10px] font-bold text-white flex items-center justify-center leading-none">
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      ) : item.badge ? (
                         <Badge
                           variant="secondary"
                           className="text-xs px-1.5 py-0 h-5"
                         >
                           {item.badge}
                         </Badge>
-                      )}
+                      ) : null}
                     </>
                   )}
                 </Link>
@@ -178,14 +199,18 @@ export function ListerSidebar() {
                         className="flex items-center gap-2"
                       >
                         {item.label}
-                        {item.badge && (
+                        {isNotifications && unreadCount > 0 ? (
+                          <span className="h-4 w-4 rounded-full bg-destructive text-[9px] font-bold text-white flex items-center justify-center">
+                            {unreadCount > 9 ? "9+" : unreadCount}
+                          </span>
+                        ) : item.badge ? (
                           <Badge
                             variant="secondary"
                             className="text-xs px-1.5 py-0 h-5"
                           >
                             {item.badge}
                           </Badge>
-                        )}
+                        ) : null}
                       </TooltipContent>
                     </Tooltip>
                   ) : (
@@ -204,7 +229,6 @@ export function ListerSidebar() {
             isOpen ? "px-3" : "px-2",
           )}
         >
-          {/* User Info */}
           {isOpen ? (
             <Link
               href="/lister/profile"
@@ -262,7 +286,6 @@ export function ListerSidebar() {
             </Tooltip>
           )}
 
-          {/* Sign Out */}
           {isOpen ? (
             <Button
               variant="ghost"

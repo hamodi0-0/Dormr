@@ -2,10 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import type { Notification } from "@/lib/types/listing";
 
-export function useNotifications(userId: string | null) {
+export function useNotifications(
+  userId: string | null,
+  initialData?: Notification[],
+) {
   return useQuery<Notification[]>({
     queryKey: ["notifications", userId],
     enabled: !!userId,
+    initialData,
     queryFn: async () => {
       const supabase = createClient();
       const { data, error } = await supabase

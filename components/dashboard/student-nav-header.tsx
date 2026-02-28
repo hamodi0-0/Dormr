@@ -10,15 +10,15 @@ import {
   Settings,
   Menu,
   X,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { NotificationBell } from "@/components/notifications/notifications-bell";
 import { useStudentProfile } from "@/hooks/use-student-profile";
-
-// ─── Nav config ───────────────────────────────────────────────────────────────
 
 interface NavItem {
   href: string;
@@ -27,22 +27,22 @@ interface NavItem {
   badge?: string;
 }
 
+// Notifications intentionally omitted from desktop text nav — covered by bell icon
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/listings", label: "Browse Listings", icon: Building2 },
-  {
-    href: "/dashboard/chats",
-    label: "Chats",
-    icon: MessageSquare,
-  },
+  { href: "/dashboard/chats", label: "Chats", icon: MessageSquare },
   { href: "/dashboard/saved", label: "Saved", icon: Heart },
-  {
-    href: "/dashboard/settings",
-    label: "Settings",
-    icon: Settings,
-  },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// Notifications appears in the mobile drawer
+const MOBILE_NAV_ITEMS: NavItem[] = [
+  { href: "/dashboard/listings", label: "Browse Listings", icon: Building2 },
+  { href: "/dashboard/notifications", label: "Notifications", icon: Bell },
+  { href: "/dashboard/chats", label: "Chats", icon: MessageSquare },
+  { href: "/dashboard/saved", label: "Saved", icon: Heart },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings },
+];
 
 export function StudentNavHeader() {
   const pathname = usePathname();
@@ -76,9 +76,9 @@ export function StudentNavHeader() {
 
   return (
     <>
-      {/* ── Main Header — full bleed, logo left edge, avatar right edge ── */}
+      {/* ── Main Header ── */}
       <header className="h-16 border-b border-border bg-background/95 backdrop-blur-sm flex items-center px-4 sm:px-6 shrink-0">
-        {/* Logo — hard left */}
+        {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-2.5 shrink-0">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
             <Building2 className="h-4 w-4 text-primary-foreground" />
@@ -88,10 +88,10 @@ export function StudentNavHeader() {
           </span>
         </Link>
 
-        <div className="flex-2" />
+        <div className="flex-1" />
 
-        {/* Desktop Nav — centred in remaining space */}
-        <nav className="hidden md:flex items-center  gap-4 ml-6">
+        {/* Desktop Nav */}
+        <nav className="hidden md:flex items-center gap-4 ml-6">
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.href);
             return (
@@ -126,14 +126,18 @@ export function StudentNavHeader() {
           })}
         </nav>
 
-        {/* Spacer pushes right controls to hard right */}
-        <div className="flex-3" />
+        <div className="flex-1" />
 
-        {/* Right controls — hard right */}
-        <div className="flex items-center gap-3">
+        {/* Right controls */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Notification bell — shows count badge, links to notifications page */}
+          <NotificationBell
+            userId={profile?.id ?? null}
+            href="/dashboard/notifications"
+          />
+
           <ThemeToggle />
 
-          {/* Avatar links to profile page — logout lives there */}
           <Link href="/dashboard/profile" aria-label="My profile">
             <span className="flex items-center justify-center h-9 w-9 rounded-full hover:ring-2 hover:ring-primary/20 transition-all">
               <Avatar className="h-8 w-8">
@@ -148,7 +152,6 @@ export function StudentNavHeader() {
             </span>
           </Link>
 
-          {/* Hamburger — mobile only */}
           <Button
             variant="ghost"
             size="icon"
@@ -161,7 +164,7 @@ export function StudentNavHeader() {
         </div>
       </header>
 
-      {/* ── Mobile Overlay ───────────────────────────────────────────────── */}
+      {/* ── Mobile Overlay ── */}
       <div
         className={cn(
           "fixed inset-0 z-40 bg-black/50 backdrop-blur-sm",
@@ -174,7 +177,7 @@ export function StudentNavHeader() {
         aria-hidden="true"
       />
 
-      {/* ── Mobile Drawer ────────────────────────────────────────────────── */}
+      {/* ── Mobile Drawer ── */}
       <aside
         className={cn(
           "fixed top-0 left-0 z-50 h-full w-72 bg-background border-r border-border shadow-2xl",
@@ -209,15 +212,16 @@ export function StudentNavHeader() {
           </Button>
         </div>
 
-        {/* Nav links */}
+        {/* Nav links — uses MOBILE_NAV_ITEMS which includes Notifications */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-          {NAV_ITEMS.map((item) => {
+          {MOBILE_NAV_ITEMS.map((item) => {
             const active = isActive(item.href);
             const Icon = item.icon;
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => setMobileOpen(false)}
                 className={cn(
                   "relative flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all duration-150",
                   active
@@ -248,7 +252,7 @@ export function StudentNavHeader() {
           })}
         </nav>
 
-        {/* Footer — profile link only, logout is on profile page */}
+        {/* Footer — profile link */}
         <div className="px-3 pb-6 pt-3 border-t border-border shrink-0">
           <Link
             href="/dashboard/profile"

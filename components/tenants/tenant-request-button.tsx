@@ -12,7 +12,6 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -53,6 +52,7 @@ export function TenantRequestButton({
     startTransition(async () => {
       const formData = new FormData();
       formData.set("listing_id", listingId);
+      console.log("listing id:", listingId);
       if (message.trim()) formData.set("message", message.trim());
 
       const result = await submitTenantRequest(formData);
