@@ -401,17 +401,19 @@ export function StudentNotificationsClient({
     hasMarkedRead.current = true;
 
     markStudentNotificationsRead(unreadIds).then(({ error }) => {
-      if (!error) {
-        queryClient.setQueryData<StudentNotificationItem[]>(
-          ["student-notifications", userId],
-          (old) =>
-            (old ?? []).map((item) =>
-              unreadIds.includes(item.requestId)
-                ? { ...item, readAt: new Date().toISOString() }
-                : item,
-            ),
-        );
+      if (error) {
+        console.error("[markStudentNotificationsRead] failed:", error);
+        return; // don't patch cache if DB write failed
       }
+      queryClient.setQueryData<StudentNotificationItem[]>(
+        ["student-notifications", userId],
+        (old) =>
+          (old ?? []).map((item) =>
+            unreadIds.includes(item.requestId)
+              ? { ...item, readAt: new Date().toISOString() }
+              : item,
+          ),
+      );
     });
   }, [items, userId, queryClient]);
 
