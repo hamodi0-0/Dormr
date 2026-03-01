@@ -62,7 +62,11 @@ export interface ListingImage {
 
 // ─── Tenant request types ─────────────────────────────────────────────────────
 
-export type TenantRequestStatus = "pending" | "accepted" | "rejected";
+export type TenantRequestStatus =
+  | "pending"
+  | "accepted"
+  | "rejected"
+  | "removed";
 
 export interface TenantRequest {
   id: string;

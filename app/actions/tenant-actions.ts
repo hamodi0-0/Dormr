@@ -4,8 +4,6 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
-// ─── Submit a tenant request (student side) ───────────────────────────────────
-
 const tenantRequestSchema = z.object({
   listing_id: z.string().uuid(),
   message: z.string().max(300).optional(),
@@ -38,24 +36,49 @@ export async function submitTenantRequest(
   if (listing.max_occupants <= 1)
     return { error: "This listing does not support tenant requests" };
 
-  const { error } = await supabase.from("tenant_requests").insert({
-    listing_id: parsed.data.listing_id,
-    requester_id: user.id,
-    message: parsed.data.message ?? null,
-  });
+  // Check for any existing request
+  const { data: existingRequest } = await supabase
+    .from("tenant_requests")
+    .select("id, status")
+    .eq("listing_id", parsed.data.listing_id)
+    .eq("requester_id", user.id)
+    .maybeSingle();
 
-  if (error) {
-    if (error.code === "23505")
+  if (existingRequest) {
+    if (existingRequest.status === "pending") {
       return { error: "You already have a pending request for this listing" };
-    return { error: error.message };
+    }
+
+    // Re-open for rejected or removed students
+    const { error } = await supabase
+      .from("tenant_requests")
+      .update({
+        status: "pending",
+        message: parsed.data.message ?? null,
+        read_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existingRequest.id);
+
+    if (error) return { error: error.message };
+  } else {
+    const { error } = await supabase.from("tenant_requests").insert({
+      listing_id: parsed.data.listing_id,
+      requester_id: user.id,
+      message: parsed.data.message ?? null,
+    });
+
+    if (error) {
+      if (error.code === "23505")
+        return { error: "You already have a pending request for this listing" };
+      return { error: error.message };
+    }
   }
 
   revalidatePath(`/dashboard/listings/${parsed.data.listing_id}`);
   revalidatePath(`/lister/notifications`);
   return { error: null };
 }
-
-// ─── Accept a tenant request (lister side) ────────────────────────────────────
 
 export async function acceptTenantRequest(
   requestId: string,
@@ -102,8 +125,6 @@ export async function acceptTenantRequest(
   return { error: null };
 }
 
-// ─── Reject a tenant request (lister side) ────────────────────────────────────
-
 export async function rejectTenantRequest(
   requestId: string,
 ): Promise<{ error: string | null }> {
@@ -141,8 +162,6 @@ export async function rejectTenantRequest(
   return { error: null };
 }
 
-// ─── Remove a confirmed tenant (lister side) ─────────────────────────────────
-
 export async function removeTenant(
   listingId: string,
   userId: string,
@@ -162,13 +181,28 @@ export async function removeTenant(
   if (!listing || listing.lister_id !== user.id)
     return { error: "Unauthorized" };
 
+  // Remove from listing_tenants
   await supabase
     .from("listing_tenants")
     .delete()
     .eq("listing_id", listingId)
     .eq("user_id", userId);
 
+  // Set request to "removed" with read_at = null so the student gets a
+  // notification badge and sees the removal in their notifications page.
+  await supabase
+    .from("tenant_requests")
+    .update({
+      status: "removed",
+      read_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("listing_id", listingId)
+    .eq("requester_id", userId)
+    .eq("status", "accepted");
+
   revalidatePath(`/lister/listings/${listingId}/tenants`);
+  revalidatePath(`/dashboard/notifications`);
   return { error: null };
 }
 
@@ -187,8 +221,8 @@ export async function markStudentNotificationsRead(
     .from("tenant_requests")
     .update({ read_at: new Date().toISOString() })
     .in("id", requestIds)
-    .eq("requester_id", user.id) // security: only own requests
-    .is("read_at", null); // only update actually unread ones
+    .eq("requester_id", user.id)
+    .is("read_at", null);
 
   if (error) return { error: error.message };
   return { error: null };

@@ -7,7 +7,6 @@ import {
   UserPlus,
   Clock,
   CheckCircle2,
-  XCircle,
   Loader2,
   MessageSquare,
 } from "lucide-react";
@@ -52,7 +51,6 @@ export function TenantRequestButton({
     startTransition(async () => {
       const formData = new FormData();
       formData.set("listing_id", listingId);
-      console.log("listing id:", listingId);
       if (message.trim()) formData.set("message", message.trim());
 
       const result = await submitTenantRequest(formData);
@@ -70,7 +68,8 @@ export function TenantRequestButton({
     });
   };
 
-  if (status === "accepted" || status === "is_tenant") {
+  // Confirmed in listing_tenants
+  if (status === "is_tenant") {
     return (
       <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
         <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -81,29 +80,19 @@ export function TenantRequestButton({
     );
   }
 
+  // Pending — waiting for lister
   if (status === "pending") {
     return (
       <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
         <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
         <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
-          Request pending
+          Request pending — waiting for lister response
         </span>
       </div>
     );
   }
 
-  if (status === "rejected") {
-    return (
-      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50">
-        <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
-        <span className="text-sm text-muted-foreground">
-          Request was declined
-        </span>
-      </div>
-    );
-  }
-
-  // status === 'none'
+  // none | rejected | removed — all show the request button
   return (
     <>
       <Button

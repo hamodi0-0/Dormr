@@ -14,6 +14,7 @@ import {
   UserPlus,
   MessageSquare,
   ArrowRight,
+  UserMinus,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,16 @@ function StatusBadge({ status }: { status: TenantRequestStatus }) {
       >
         <CheckCircle2 className="h-2.5 w-2.5" />
         Accepted
+      </Badge>
+    );
+  if (status === "removed")
+    return (
+      <Badge
+        variant="outline"
+        className="border-orange-300 bg-orange-50 text-orange-700 dark:border-orange-700 dark:bg-orange-950/30 dark:text-orange-300 text-xs gap-1"
+      >
+        <UserMinus className="h-2.5 w-2.5" />
+        Removed
       </Badge>
     );
   return (
@@ -219,6 +230,7 @@ function ListerNotificationItem({ item }: { item: ListerNotificationItem }) {
 
 function StudentNotificationItem({ item }: { item: StudentNotificationItem }) {
   const isAccepted = item.status === "accepted";
+  const isRemoved = item.status === "removed";
   const isUnread = item.readAt === null;
 
   return (
@@ -234,11 +246,17 @@ function StudentNotificationItem({ item }: { item: StudentNotificationItem }) {
       <div
         className={cn(
           "mt-0.5 shrink-0 w-8 h-8 rounded-full flex items-center justify-center",
-          isAccepted ? "bg-emerald-100 dark:bg-emerald-950/40" : "bg-muted",
+          isAccepted
+            ? "bg-emerald-100 dark:bg-emerald-950/40"
+            : isRemoved
+              ? "bg-orange-100 dark:bg-orange-950/40"
+              : "bg-muted",
         )}
       >
         {isAccepted ? (
           <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+        ) : isRemoved ? (
+          <UserMinus className="h-4 w-4 text-orange-600 dark:text-orange-400" />
         ) : (
           <XCircle className="h-4 w-4 text-muted-foreground" />
         )}
@@ -267,12 +285,16 @@ function StudentNotificationItem({ item }: { item: StudentNotificationItem }) {
             "text-xs mt-0.5",
             isAccepted
               ? "text-emerald-600 dark:text-emerald-400"
-              : "text-muted-foreground",
+              : isRemoved
+                ? "text-orange-600 dark:text-orange-400"
+                : "text-muted-foreground",
           )}
         >
           {isAccepted
             ? "You've been confirmed as a tenant on this listing."
-            : "Your request was declined by the lister."}
+            : isRemoved
+              ? "You've been removed from this listing by the lister."
+              : "Your request was declined by the lister."}
         </p>
       </div>
 
@@ -367,7 +389,6 @@ export function StudentNotificationsClient({
   const { data: items = [] } = useStudentNotifications(userId, initialData);
   const hasMarkedRead = useRef(false);
 
-  // Mark all unread notifications as read on first mount
   useEffect(() => {
     if (hasMarkedRead.current) return;
 
@@ -381,7 +402,6 @@ export function StudentNotificationsClient({
 
     markStudentNotificationsRead(unreadIds).then(({ error }) => {
       if (!error) {
-        // Optimistically update local cache so the badge drops immediately
         queryClient.setQueryData<StudentNotificationItem[]>(
           ["student-notifications", userId],
           (old) =>
@@ -397,6 +417,7 @@ export function StudentNotificationsClient({
 
   const acceptedItems = items.filter((i) => i.status === "accepted");
   const rejectedItems = items.filter((i) => i.status === "rejected");
+  const removedItems = items.filter((i) => i.status === "removed");
   const unreadCount = items.filter((i) => i.readAt === null).length;
 
   return (
@@ -422,6 +443,22 @@ export function StudentNotificationsClient({
         <EmptyState message="You'll be notified here when a lister accepts or declines your tenant request." />
       ) : (
         <div className="space-y-4">
+          {removedItems.length > 0 && (
+            <div>
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-1">
+                Removed ({removedItems.length})
+              </h2>
+              <div className="rounded-xl border border-border overflow-hidden bg-card shadow-sm">
+                {removedItems.map((item, i) => (
+                  <div key={item.requestId}>
+                    <StudentNotificationItem item={item} />
+                    {i < removedItems.length - 1 && <Separator />}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {acceptedItems.length > 0 && (
             <div>
               <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-1">
