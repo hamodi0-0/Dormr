@@ -23,7 +23,7 @@ export function NotificationBell({
       asChild
       className={cn("relative", className)}
       aria-label={
-        count > 0 ? `Notifications — ${count} pending` : "Notifications"
+        count > 0 ? `Notifications — ${count} unread` : "Notifications"
       }
     >
       <Link href={href}>

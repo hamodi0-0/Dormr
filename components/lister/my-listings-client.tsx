@@ -76,7 +76,7 @@ export function MyListingsClient({ initialListings }: MyListingsClientProps) {
             value={statusFilter}
             onValueChange={(v) => setStatusFilter(v as StatusFilter)}
           >
-            <SelectTrigger className="h-10 w-auto min-w-[150px]">
+            <SelectTrigger className="h-10 w-auto min-w-37.5">
               <SlidersHorizontal className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
               <SelectValue />
             </SelectTrigger>

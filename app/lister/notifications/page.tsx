@@ -17,7 +17,6 @@ export default async function ListerNotificationsPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/");
 
-  // Get all listing IDs for this lister
   const { data: listingRows } = await supabase
     .from("listings")
     .select("id")
@@ -29,65 +28,66 @@ export default async function ListerNotificationsPage() {
   let initialData: ListerNotificationItem[] = [];
 
   if (listingIds.length > 0) {
-    const { data: requests } = await supabase
+    // Step 1: fetch requests + listing title (FK exists: listing_id → listings.id)
+    const { data: requests, error: requestsError } = await supabase
       .from("tenant_requests")
       .select(
         `
         id,
         listing_id,
+        requester_id,
         status,
         message,
         created_at,
         updated_at,
-        listings(title),
-        student_profiles(full_name, avatar_url, university_name, major)
+        listings(title)
       `,
       )
       .in("listing_id", listingIds)
       .order("created_at", { ascending: false })
       .limit(50);
 
-    console.log("Requests >>>>>>>>>>", requests); //null
-    console.log("ids >>>>>>>>>>", listingIds); // Array [ "dbf84ab4-3a17-484b-b243-026c03b1d787", "74c41a71-a76c-4316-822d-4946f331b193" ]
+    if (requestsError) {
+      console.error("Requests error:", requestsError);
+    }
 
-    initialData = (requests ?? []).map((row) => {
-      const listing = normaliseSingle(
-        row.listings as { title: string } | { title: string }[] | null,
-      );
-      const profile = normaliseSingle(
-        row.student_profiles as
-          | {
-              full_name: string;
-              avatar_url: string | null;
-              university_name: string;
-              major: string;
-            }
-          | {
-              full_name: string;
-              avatar_url: string | null;
-              university_name: string;
-              major: string;
-            }[]
-          | null,
-      );
+    if (requests && requests.length > 0) {
+      // Step 2: fetch student profiles separately (requester_id → auth.users, not public.student_profiles)
+      const requesterIds = [...new Set(requests.map((r) => r.requester_id))];
 
-      return {
-        requestId: row.id,
-        listingId: row.listing_id,
-        listingTitle: listing?.title ?? "Unknown listing",
-        requesterName: profile?.full_name ?? "Unknown student",
-        requesterAvatar: profile?.avatar_url ?? null,
-        requesterUniversity: profile?.university_name ?? "",
-        requesterMajor: profile?.major ?? "",
-        message: row.message ?? null,
-        status: row.status as ListerNotificationItem["status"],
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-      };
-    });
+      const { data: profiles, error: profilesError } = await supabase
+        .from("student_profiles")
+        .select("id, full_name, avatar_url, university_name, major")
+        .in("id", requesterIds);
+
+      if (profilesError) {
+        console.error("Profiles error:", profilesError);
+      }
+
+      const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+
+      initialData = requests.map((row) => {
+        const listing = normaliseSingle(
+          row.listings as { title: string } | { title: string }[] | null,
+        );
+        const profile = profileMap.get(row.requester_id) ?? null;
+
+        return {
+          requestId: row.id,
+          listingId: row.listing_id,
+          listingTitle: listing?.title ?? "Unknown listing",
+          requesterName: profile?.full_name ?? "Unknown student",
+          requesterAvatar: profile?.avatar_url ?? null,
+          requesterUniversity: profile?.university_name ?? "",
+          requesterMajor: profile?.major ?? "",
+          message: row.message ?? null,
+          status: row.status as ListerNotificationItem["status"],
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+        };
+      });
+    }
   }
-
-  console.log("Data >>>>>>>>>>", initialData); //Array []
 
   return (
     <>

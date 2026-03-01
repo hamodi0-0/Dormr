@@ -4,9 +4,8 @@ import { ListerDashboardHeader } from "@/components/lister/lister-dashboard-head
 import { NoTenantsPrompt } from "@/components/tenants/no-tenants-prompt";
 import { ConfirmedTenantRow } from "@/components/tenants/confirmed-tenant-row";
 import { TenantCountBadge } from "@/components/tenants/tenant-count-badge";
-import { EditContactPhoneForm } from "@/components/tenants/edit-contact-phone-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, ArrowLeft, Phone } from "lucide-react";
+import { Users, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -14,30 +13,23 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-// ─── Join shape helpers ───────────────────────────────────────────────────────
-
-interface StudentProfileJoin {
+interface StudentProfile {
+  id: string;
   full_name: string;
   avatar_url: string | null;
   university_name: string;
   major: string;
 }
 
-interface TenantRow {
+interface TenantRowRaw {
   id: string;
   user_id: string;
   added_at: string;
-  student_profiles: StudentProfileJoin | StudentProfileJoin[] | null;
 }
 
-function extractProfile(
-  profiles: StudentProfileJoin | StudentProfileJoin[] | null,
-): StudentProfileJoin | null {
-  if (!profiles) return null;
-  return Array.isArray(profiles) ? (profiles[0] ?? null) : profiles;
+interface ResolvedTenant extends TenantRowRaw {
+  profile: StudentProfile;
 }
-
-// ─── Server Component — initial page load data, doesn't change frequently ────
 
 export default async function ListerTenantsPage({ params }: PageProps) {
   const { id } = await params;
@@ -53,14 +45,12 @@ export default async function ListerTenantsPage({ params }: PageProps) {
       .from("listings")
       .select("id, title, max_occupants, contact_phone, lister_id")
       .eq("id", id)
-      .eq("lister_id", user.id) // ownership guard
+      .eq("lister_id", user.id)
       .single(),
 
     supabase
       .from("listing_tenants")
-      .select(
-        "id, user_id, added_at, student_profiles(full_name, avatar_url, university_name, major)",
-      )
+      .select("id, user_id, added_at")
       .eq("listing_id", id)
       .order("added_at", { ascending: true }),
   ]);
@@ -68,30 +58,51 @@ export default async function ListerTenantsPage({ params }: PageProps) {
   if (listingResult.error || !listingResult.data) notFound();
 
   const listing = listingResult.data;
+  const rawTenants = (tenantsResult.data ?? []) as TenantRowRaw[];
 
-  const tenants = ((tenantsResult.data ?? []) as TenantRow[]).filter(
-    (row) => extractProfile(row.student_profiles) !== null,
-  );
+  // Step 2 — batch fetch profiles by user_id
+  let tenants: ResolvedTenant[] = [];
+
+  if (rawTenants.length > 0) {
+    const userIds = rawTenants.map((t) => t.user_id);
+
+    const { data: profiles, error: profilesError } = await supabase
+      .from("student_profiles")
+      .select("id, full_name, avatar_url, university_name, major")
+      .in("id", userIds);
+
+    if (profilesError) {
+      console.error("Failed to fetch tenant profiles", profilesError);
+    }
+
+    const profileMap = new Map(
+      (profiles ?? []).map((p) => [p.id, p as StudentProfile]),
+    );
+
+    tenants = rawTenants.reduce<ResolvedTenant[]>((acc, row) => {
+      const profile = profileMap.get(row.user_id);
+      if (profile) acc.push({ ...row, profile });
+      return acc;
+    }, []);
+  }
 
   return (
     <>
       <ListerDashboardHeader title="Manage Tenants" />
 
       <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto w-full space-y-6">
-        {/* Back link */}
         <Button
           asChild
           variant="ghost"
           size="sm"
           className="gap-1.5 -ml-2 text-muted-foreground hover:text-foreground"
         >
-          <Link href={`/lister/listings/${id}/edit`}>
+          <Link href={`/lister/listings/`}>
             <ArrowLeft className="h-3.5 w-3.5" />
             Back to listing
           </Link>
         </Button>
 
-        {/* Page header */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div>
             <h1 className="text-xl sm:text-2xl font-serif font-medium text-foreground leading-snug">
@@ -106,10 +117,9 @@ export default async function ListerTenantsPage({ params }: PageProps) {
             maxOccupants={listing.max_occupants}
           />
         </div>
-        {/* No tenants prompt */}
+
         {tenants.length === 0 && <NoTenantsPrompt variant="lister" />}
 
-        {/* Confirmed tenants */}
         {tenants.length > 0 && (
           <Card className="py-0">
             <CardHeader className="pt-5 pb-0 px-5">
@@ -122,19 +132,16 @@ export default async function ListerTenantsPage({ params }: PageProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="px-5 pb-3 pt-2">
-              {tenants.map((tenant) => {
-                const profile = extractProfile(tenant.student_profiles)!;
-                return (
-                  <ConfirmedTenantRow
-                    key={tenant.id}
-                    listingId={id}
-                    userId={tenant.user_id}
-                    tenantName={profile.full_name}
-                    tenantUniversity={profile.university_name}
-                    addedAt={tenant.added_at}
-                  />
-                );
-              })}
+              {tenants.map((tenant) => (
+                <ConfirmedTenantRow
+                  key={tenant.id}
+                  listingId={id}
+                  userId={tenant.user_id}
+                  tenantName={tenant.profile.full_name}
+                  tenantUniversity={tenant.profile.university_name}
+                  addedAt={tenant.added_at}
+                />
+              ))}
             </CardContent>
           </Card>
         )}

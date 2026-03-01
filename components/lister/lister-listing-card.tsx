@@ -13,6 +13,7 @@ import {
   EyeOff,
   Calendar,
   BadgePoundSterling,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -200,10 +201,22 @@ export function ListerListingCard({ listing }: ListerListingCardProps) {
 
         {/* Actions */}
         <div className="flex items-center gap-2 pt-1">
-          <Button asChild size="sm" className="flex-1 h-8 text-xs gap-1.5">
+          <Button asChild size="sm" className="flex-2 h-8 text-xs gap-1.5">
             <Link href={`/lister/listings/${listing.id}/edit`}>
               <Pencil className="h-3 w-3" />
               Edit
+            </Link>
+          </Button>
+
+          <Button
+            asChild
+            size="sm"
+            variant="outline"
+            className="flex-1 h-8 text-xs gap-1.5"
+          >
+            <Link href={`/lister/listings/${listing.id}/tenants`}>
+              <Users className="h-3 w-3" />
+              View Tenants
             </Link>
           </Button>
 
@@ -228,7 +241,7 @@ export function ListerListingCard({ listing }: ListerListingCardProps) {
               <Eye className="h-3 w-3" />
             )}
             <span className="hidden sm:inline">
-              {isActive ? "Pause" : "Activate"}
+              {isActive ? "Hide" : "Activate"}
             </span>
           </Button>
 

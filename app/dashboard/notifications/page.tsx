@@ -32,6 +32,7 @@ export default async function StudentNotificationsPage() {
     `,
     )
     .eq("requester_id", user.id)
+    .neq("status", "pending")
     .order("updated_at", { ascending: false })
     .limit(50);
 

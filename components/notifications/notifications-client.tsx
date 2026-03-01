@@ -7,7 +7,6 @@ import { useTransition } from "react";
 import { toast } from "sonner";
 import {
   Bell,
-  Clock,
   CheckCircle2,
   XCircle,
   Loader2,
@@ -33,7 +32,7 @@ import {
 } from "@/app/actions/tenant-actions";
 import type { TenantRequestStatus } from "@/lib/types/listing";
 
-// ─── Status badge helper ──────────────────────────────────────────────────────
+// ─── Status badge ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: TenantRequestStatus }) {
   if (status === "pending")
@@ -42,7 +41,6 @@ function StatusBadge({ status }: { status: TenantRequestStatus }) {
         variant="outline"
         className="border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300 text-xs gap-1"
       >
-        <Clock className="h-2.5 w-2.5" />
         Pending
       </Badge>
     );
@@ -129,7 +127,6 @@ function ListerNotificationItem({ item }: { item: ListerNotificationItem }) {
         item.status === "pending" && "bg-primary/5 dark:bg-primary/10",
       )}
     >
-      {/* Icon + avatar */}
       <div className="flex items-start gap-3 flex-1 min-w-0">
         <div className="mt-0.5 shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center">
           <UserPlus className="h-4 w-4 text-primary" />
@@ -182,7 +179,6 @@ function ListerNotificationItem({ item }: { item: ListerNotificationItem }) {
         </div>
       </div>
 
-      {/* Actions — only for pending */}
       {item.status === "pending" && (
         <div className="flex items-center gap-2 shrink-0 sm:mt-0.5">
           <Button
@@ -221,18 +217,23 @@ function ListerNotificationItem({ item }: { item: ListerNotificationItem }) {
 // ─── Student notification item ────────────────────────────────────────────────
 
 function StudentNotificationItem({ item }: { item: StudentNotificationItem }) {
+  const isAccepted = item.status === "accepted";
+
   return (
     <Link
       href={`/dashboard/listings/${item.listingId}`}
       className="flex items-start gap-3 px-4 py-4 hover:bg-accent/50 transition-colors group"
     >
-      <div className="mt-0.5 shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-        {item.status === "accepted" ? (
-          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-        ) : item.status === "rejected" ? (
-          <XCircle className="h-4 w-4 text-muted-foreground" />
+      <div
+        className={cn(
+          "mt-0.5 shrink-0 w-8 h-8 rounded-full flex items-center justify-center",
+          isAccepted ? "bg-emerald-100 dark:bg-emerald-950/40" : "bg-muted",
+        )}
+      >
+        {isAccepted ? (
+          <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
         ) : (
-          <Clock className="h-4 w-4 text-amber-500" />
+          <XCircle className="h-4 w-4 text-muted-foreground" />
         )}
       </div>
 
@@ -249,21 +250,18 @@ function StudentNotificationItem({ item }: { item: StudentNotificationItem }) {
           {formatDistanceToNow(new Date(item.updatedAt), { addSuffix: true })}
         </p>
 
-        {item.status === "accepted" && (
-          <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">
-            You&apos;ve been confirmed as a tenant on this listing.
-          </p>
-        )}
-        {item.status === "pending" && (
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Your request is waiting for the lister to respond.
-          </p>
-        )}
-        {item.status === "rejected" && (
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Your request was declined by the lister.
-          </p>
-        )}
+        <p
+          className={cn(
+            "text-xs mt-0.5",
+            isAccepted
+              ? "text-emerald-600 dark:text-emerald-400"
+              : "text-muted-foreground",
+          )}
+        >
+          {isAccepted
+            ? "You've been confirmed as a tenant on this listing."
+            : "Your request was declined by the lister."}
+        </p>
       </div>
 
       <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -305,7 +303,6 @@ export function ListerNotificationsClient({
         <EmptyState message="You'll see tenant requests here when students want to be listed on your properties." />
       ) : (
         <div className="space-y-4">
-          {/* Pending section */}
           {pendingItems.length > 0 && (
             <div>
               <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-1">
@@ -322,7 +319,6 @@ export function ListerNotificationsClient({
             </div>
           )}
 
-          {/* Resolved section */}
           {resolvedItems.length > 0 && (
             <div>
               <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-1">
@@ -357,8 +353,8 @@ export function StudentNotificationsClient({
 }: StudentNotificationsClientProps) {
   const { data: items = [] } = useStudentNotifications(userId, initialData);
 
-  const pendingItems = items.filter((i) => i.status === "pending");
-  const resolvedItems = items.filter((i) => i.status !== "pending");
+  const acceptedItems = items.filter((i) => i.status === "accepted");
+  const rejectedItems = items.filter((i) => i.status === "rejected");
 
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto w-full">
@@ -368,41 +364,41 @@ export function StudentNotificationsClient({
         </h1>
         {items.length > 0 && (
           <p className="text-sm text-muted-foreground mt-0.5">
-            {items.length} tenant request{items.length !== 1 ? "s" : ""}
+            {items.length} notification{items.length !== 1 ? "s" : ""}
           </p>
         )}
       </div>
 
       {items.length === 0 ? (
-        <EmptyState message="You'll see updates about your tenant requests here. Browse listings and request to be listed as a tenant." />
+        <EmptyState message="You'll be notified here when a lister accepts or declines your tenant request." />
       ) : (
         <div className="space-y-4">
-          {pendingItems.length > 0 && (
+          {acceptedItems.length > 0 && (
             <div>
               <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-1">
-                Pending ({pendingItems.length})
+                Accepted ({acceptedItems.length})
               </h2>
               <div className="rounded-xl border border-border overflow-hidden bg-card shadow-sm">
-                {pendingItems.map((item, i) => (
+                {acceptedItems.map((item, i) => (
                   <div key={item.requestId}>
                     <StudentNotificationItem item={item} />
-                    {i < pendingItems.length - 1 && <Separator />}
+                    {i < acceptedItems.length - 1 && <Separator />}
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {resolvedItems.length > 0 && (
+          {rejectedItems.length > 0 && (
             <div>
               <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-1">
-                Resolved ({resolvedItems.length})
+                Declined ({rejectedItems.length})
               </h2>
               <div className="rounded-xl border border-border overflow-hidden bg-card shadow-sm">
-                {resolvedItems.map((item, i) => (
+                {rejectedItems.map((item, i) => (
                   <div key={item.requestId}>
                     <StudentNotificationItem item={item} />
-                    {i < resolvedItems.length - 1 && <Separator />}
+                    {i < rejectedItems.length - 1 && <Separator />}
                   </div>
                 ))}
               </div>

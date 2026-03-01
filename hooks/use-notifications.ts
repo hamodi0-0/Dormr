@@ -2,8 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import type { TenantRequestStatus } from "@/lib/types/listing";
 
-// ─── Lister: requests across all their listings ───────────────────────────────
-
 export interface ListerNotificationItem {
   requestId: string;
   listingId: string;
@@ -28,7 +26,6 @@ async function fetchListerNotifications(
 ): Promise<ListerNotificationItem[]> {
   const supabase = createClient();
 
-  // First get the lister's active listing IDs
   const { data: listingRows } = await supabase
     .from("listings")
     .select("id")
@@ -38,46 +35,43 @@ async function fetchListerNotifications(
   const listingIds = (listingRows ?? []).map((l) => l.id);
   if (listingIds.length === 0) return [];
 
-  const { data, error } = await supabase
+  const { data: requests, error: requestsError } = await supabase
     .from("tenant_requests")
     .select(
       `
       id,
       listing_id,
+      requester_id,
       status,
       message,
       created_at,
       updated_at,
-      listings(title),
-      student_profiles(full_name, avatar_url, university_name, major)
+      listings(title)
     `,
     )
     .in("listing_id", listingIds)
     .order("created_at", { ascending: false })
     .limit(50);
 
-  if (error) throw error;
+  if (requestsError) throw requestsError;
+  if (!requests || requests.length === 0) return [];
 
-  return (data ?? []).map((row) => {
+  const requesterIds = [...new Set(requests.map((r) => r.requester_id))];
+
+  const { data: profiles, error: profilesError } = await supabase
+    .from("student_profiles")
+    .select("id, full_name, avatar_url, university_name, major")
+    .in("id", requesterIds);
+
+  if (profilesError) throw profilesError;
+
+  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+
+  return requests.map((row) => {
     const listing = normaliseSingle(
       row.listings as { title: string } | { title: string }[] | null,
     );
-    const profile = normaliseSingle(
-      row.student_profiles as
-        | {
-            full_name: string;
-            avatar_url: string | null;
-            university_name: string;
-            major: string;
-          }
-        | {
-            full_name: string;
-            avatar_url: string | null;
-            university_name: string;
-            major: string;
-          }[]
-        | null,
-    );
+    const profile = profileMap.get(row.requester_id) ?? null;
 
     return {
       requestId: row.id,
@@ -108,13 +102,12 @@ export function useListerNotifications(
   });
 }
 
-/** Count of pending requests — used for the bell badge */
 export function useListerPendingCount(liserId: string | null): number {
   const { data } = useListerNotifications(liserId);
   return data?.filter((n) => n.status === "pending").length ?? 0;
 }
 
-// ─── Student: their own requests across all listings ─────────────────────────
+// ─── Student notifications
 
 export interface StudentNotificationItem {
   requestId: string;
@@ -146,6 +139,7 @@ async function fetchStudentNotifications(
     `,
     )
     .eq("requester_id", userId)
+    .neq("status", "pending")
     .order("updated_at", { ascending: false })
     .limit(50);
 

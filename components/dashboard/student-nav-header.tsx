@@ -48,14 +48,10 @@ export function StudentNavHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { data: profile, isLoading } = useStudentProfile();
 
-  // Pending requests = actionable for student (waiting for lister response)
   const { data: notifications = [] } = useStudentNotifications(
     profile?.id ?? null,
   );
-  const pendingCount = notifications.filter(
-    (n) => n.status === "pending",
-  ).length;
-
+  const resolvedCount = notifications.length;
   useEffect(() => {
     if (mobileOpen) {
       document.body.style.overflow = "hidden";
@@ -135,7 +131,7 @@ export function StudentNavHeader() {
         <div className="flex items-center gap-1.5 sm:gap-2">
           <NotificationBell
             href="/dashboard/notifications"
-            count={pendingCount}
+            count={resolvedCount}
           />
 
           <ThemeToggle />
