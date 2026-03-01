@@ -26,7 +26,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useListerProfile } from "@/hooks/use-lister-profile";
-import { useUnreadNotificationCount } from "@/hooks/use-notifications";
+import { useListerPendingCount } from "@/hooks/use-notifications";
 
 interface NavItem {
   href: string;
@@ -71,7 +71,7 @@ export function ListerSidebar() {
   const router = useRouter();
 
   const { data: profile, isLoading } = useListerProfile();
-  const unreadCount = useUnreadNotificationCount(profile?.id ?? null);
+  const pendingCount = useListerPendingCount(profile?.id ?? null);
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -161,20 +161,18 @@ export function ListerSidebar() {
                           : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/80",
                       )}
                     />
-                    {/* Unread dot on collapsed bell */}
-                    {isNotifications && unreadCount > 0 && !isOpen && (
+                    {isNotifications && pendingCount > 0 && !isOpen && (
                       <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-destructive text-[8px] font-bold text-white flex items-center justify-center leading-none">
-                        {unreadCount > 9 ? "9+" : unreadCount}
+                        {pendingCount > 9 ? "9+" : pendingCount}
                       </span>
                     )}
                   </span>
                   {isOpen && (
                     <>
                       <span className="flex-1 truncate">{item.label}</span>
-                      {/* Unread count badge for notifications */}
-                      {isNotifications && unreadCount > 0 ? (
+                      {isNotifications && pendingCount > 0 ? (
                         <span className="ml-auto h-5 min-w-5 rounded-full bg-destructive px-1.5 text-[10px] font-bold text-white flex items-center justify-center leading-none">
-                          {unreadCount > 9 ? "9+" : unreadCount}
+                          {pendingCount > 9 ? "9+" : pendingCount}
                         </span>
                       ) : item.badge ? (
                         <Badge
@@ -199,9 +197,9 @@ export function ListerSidebar() {
                         className="flex items-center gap-2"
                       >
                         {item.label}
-                        {isNotifications && unreadCount > 0 ? (
+                        {isNotifications && pendingCount > 0 ? (
                           <span className="h-4 w-4 rounded-full bg-destructive text-[9px] font-bold text-white flex items-center justify-center">
-                            {unreadCount > 9 ? "9+" : unreadCount}
+                            {pendingCount > 9 ? "9+" : pendingCount}
                           </span>
                         ) : item.badge ? (
                           <Badge

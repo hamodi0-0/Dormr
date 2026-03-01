@@ -26,7 +26,6 @@ export async function submitTenantRequest(
   });
   if (!parsed.success) return { error: "Invalid data" };
 
-  // Prevent requesting your own listing
   const { data: listing } = await supabase
     .from("listings")
     .select("id, lister_id, title, max_occupants")
@@ -51,27 +50,8 @@ export async function submitTenantRequest(
     return { error: error.message };
   }
 
-  // Get requester's name for the notification
-  const { data: profile } = await supabase
-    .from("student_profiles")
-    .select("full_name")
-    .eq("id", user.id)
-    .single();
-
-  // Notify the lister
-  await supabase.from("notifications").insert({
-    user_id: listing.lister_id,
-    type: "tenant_request_received",
-    title: "New tenant request",
-    body: `${profile?.full_name ?? "A student"} wants to be listed as a tenant on "${listing.title}"`,
-    metadata: {
-      listing_id: listing.id,
-      listing_title: listing.title,
-      requester_name: profile?.full_name ?? null,
-    },
-  });
-
   revalidatePath(`/dashboard/listings/${parsed.data.listing_id}`);
+  revalidatePath(`/lister/notifications`);
   return { error: null };
 }
 
@@ -93,10 +73,14 @@ export async function acceptTenantRequest(
     .single();
 
   if (!request) return { error: "Request not found" };
-  if ((request.listings as { lister_id: string }).lister_id !== user.id)
+
+  const listingData = Array.isArray(request.listings)
+    ? request.listings[0]
+    : request.listings;
+
+  if ((listingData as { lister_id: string }).lister_id !== user.id)
     return { error: "Unauthorized" };
 
-  // Insert into listing_tenants
   const { error: tenantError } = await supabase.from("listing_tenants").insert({
     listing_id: request.listing_id,
     user_id: request.requester_id,
@@ -105,26 +89,16 @@ export async function acceptTenantRequest(
   if (tenantError && tenantError.code !== "23505")
     return { error: tenantError.message };
 
-  // Update request status
-  await supabase
+  const { error: updateError } = await supabase
     .from("tenant_requests")
     .update({ status: "accepted", updated_at: new Date().toISOString() })
     .eq("id", requestId);
 
-  // Notify the student
-  await supabase.from("notifications").insert({
-    user_id: request.requester_id,
-    type: "request_accepted",
-    title: "Tenant request accepted",
-    body: `You've been added as a tenant on "${(request.listings as { title: string }).title}"`,
-    metadata: {
-      listing_id: request.listing_id,
-      request_id: requestId,
-      listing_title: (request.listings as { title: string }).title,
-    },
-  });
+  if (updateError) return { error: updateError.message };
 
   revalidatePath(`/lister/listings/${request.listing_id}/tenants`);
+  revalidatePath(`/lister/notifications`);
+  revalidatePath(`/dashboard/notifications`);
   return { error: null };
 }
 
@@ -146,28 +120,24 @@ export async function rejectTenantRequest(
     .single();
 
   if (!request) return { error: "Request not found" };
-  if ((request.listings as { lister_id: string }).lister_id !== user.id)
+
+  const listingData = Array.isArray(request.listings)
+    ? request.listings[0]
+    : request.listings;
+
+  if ((listingData as { lister_id: string }).lister_id !== user.id)
     return { error: "Unauthorized" };
 
-  await supabase
+  const { error: updateError } = await supabase
     .from("tenant_requests")
     .update({ status: "rejected", updated_at: new Date().toISOString() })
     .eq("id", requestId);
 
-  // Notify the student
-  await supabase.from("notifications").insert({
-    user_id: request.requester_id,
-    type: "request_rejected",
-    title: "Tenant request declined",
-    body: `Your request to be listed as a tenant on "${(request.listings as { title: string }).title}" was declined`,
-    metadata: {
-      listing_id: request.listing_id,
-      request_id: requestId,
-      listing_title: (request.listings as { title: string }).title,
-    },
-  });
+  if (updateError) return { error: updateError.message };
 
   revalidatePath(`/lister/listings/${request.listing_id}/tenants`);
+  revalidatePath(`/lister/notifications`);
+  revalidatePath(`/dashboard/notifications`);
   return { error: null };
 }
 
@@ -199,47 +169,5 @@ export async function removeTenant(
     .eq("user_id", userId);
 
   revalidatePath(`/lister/listings/${listingId}/tenants`);
-  return { error: null };
-}
-
-// ─── Mark notification as read ────────────────────────────────────────────────
-
-export async function markNotificationRead(
-  notificationId: string,
-): Promise<{ error: string | null }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated" };
-
-  await supabase
-    .from("notifications")
-    .update({ read: true })
-    .eq("id", notificationId)
-    .eq("user_id", user.id);
-
-  revalidatePath("/dashboard/notifications");
-  revalidatePath("/lister/notifications");
-  return { error: null };
-}
-
-export async function markAllNotificationsRead(): Promise<{
-  error: string | null;
-}> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated" };
-
-  await supabase
-    .from("notifications")
-    .update({ read: true })
-    .eq("user_id", user.id)
-    .eq("read", false);
-
-  revalidatePath("/dashboard/notifications");
-  revalidatePath("/lister/notifications");
   return { error: null };
 }

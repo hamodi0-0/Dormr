@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { NotificationBell } from "@/components/notifications/notifications-bell";
+import { useStudentNotifications } from "@/hooks/use-notifications";
 import { useStudentProfile } from "@/hooks/use-student-profile";
 
 interface NavItem {
@@ -27,7 +28,6 @@ interface NavItem {
   badge?: string;
 }
 
-// Notifications intentionally omitted from desktop text nav — covered by bell icon
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/listings", label: "Browse Listings", icon: Building2 },
   { href: "/dashboard/chats", label: "Chats", icon: MessageSquare },
@@ -35,7 +35,6 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
-// Notifications appears in the mobile drawer
 const MOBILE_NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/listings", label: "Browse Listings", icon: Building2 },
   { href: "/dashboard/notifications", label: "Notifications", icon: Bell },
@@ -48,6 +47,14 @@ export function StudentNavHeader() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { data: profile, isLoading } = useStudentProfile();
+
+  // Pending requests = actionable for student (waiting for lister response)
+  const { data: notifications = [] } = useStudentNotifications(
+    profile?.id ?? null,
+  );
+  const pendingCount = notifications.filter(
+    (n) => n.status === "pending",
+  ).length;
 
   useEffect(() => {
     if (mobileOpen) {
@@ -76,9 +83,7 @@ export function StudentNavHeader() {
 
   return (
     <>
-      {/* ── Main Header ── */}
       <header className="h-16 border-b border-border bg-background/95 backdrop-blur-sm flex items-center px-4 sm:px-6 shrink-0">
-        {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-2.5 shrink-0">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
             <Building2 className="h-4 w-4 text-primary-foreground" />
@@ -90,7 +95,6 @@ export function StudentNavHeader() {
 
         <div className="flex-1" />
 
-        {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-4 ml-6">
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.href);
@@ -128,12 +132,10 @@ export function StudentNavHeader() {
 
         <div className="flex-1" />
 
-        {/* Right controls */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Notification bell — shows count badge, links to notifications page */}
           <NotificationBell
-            userId={profile?.id ?? null}
             href="/dashboard/notifications"
+            count={pendingCount}
           />
 
           <ThemeToggle />
@@ -164,7 +166,7 @@ export function StudentNavHeader() {
         </div>
       </header>
 
-      {/* ── Mobile Overlay ── */}
+      {/* Mobile Overlay */}
       <div
         className={cn(
           "fixed inset-0 z-40 bg-black/50 backdrop-blur-sm",
@@ -177,7 +179,7 @@ export function StudentNavHeader() {
         aria-hidden="true"
       />
 
-      {/* ── Mobile Drawer ── */}
+      {/* Mobile Drawer */}
       <aside
         className={cn(
           "fixed top-0 left-0 z-50 h-full w-72 bg-background border-r border-border shadow-2xl",
@@ -189,7 +191,6 @@ export function StudentNavHeader() {
         role="dialog"
         aria-label="Navigation menu"
       >
-        {/* Drawer header */}
         <div className="flex items-center justify-between h-16 px-5 border-b border-border shrink-0">
           <Link
             href="/dashboard"
@@ -212,7 +213,6 @@ export function StudentNavHeader() {
           </Button>
         </div>
 
-        {/* Nav links — uses MOBILE_NAV_ITEMS which includes Notifications */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
           {MOBILE_NAV_ITEMS.map((item) => {
             const active = isActive(item.href);
@@ -252,7 +252,6 @@ export function StudentNavHeader() {
           })}
         </nav>
 
-        {/* Footer — profile link */}
         <div className="px-3 pb-6 pt-3 border-t border-border shrink-0">
           <Link
             href="/dashboard/profile"
