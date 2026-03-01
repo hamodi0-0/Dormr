@@ -57,12 +57,6 @@ const NAV_ITEMS: NavItem[] = [
     icon: MessageSquare,
     badge: "Soon",
   },
-  {
-    href: "/lister/profile",
-    label: "Profile",
-    icon: User,
-    badge: "Soon",
-  },
 ];
 
 export function ListerSidebar() {
@@ -109,7 +103,7 @@ export function ListerSidebar() {
             isOpen ? "px-5" : "justify-center px-0",
           )}
         >
-          <Link href="/lister/listings" className="flex items-center gap-2.5">
+          <Link href="/lister/dashboard" className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
               <Building2 className="h-4 w-4 text-primary-foreground" />
             </div>

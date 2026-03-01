@@ -28,6 +28,7 @@ export default async function StudentNotificationsPage() {
       message,
       created_at,
       updated_at,
+      read_at,
       listings(title, city)
     `,
     )
@@ -53,6 +54,7 @@ export default async function StudentNotificationsPage() {
       message: row.message ?? null,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      readAt: row.read_at ?? null,
     };
   });
 

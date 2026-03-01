@@ -25,9 +25,9 @@ export function ListerDashboardHeader({ title }: ListerDashboardHeaderProps) {
       </Button>
 
       {title && (
-        <h1 className="text-base font-semibold text-foreground truncate">
+        <p className="text-base font-semibold text-muted-foreground truncate">
           {title}
-        </h1>
+        </p>
       )}
 
       <div className="ml-auto flex items-center gap-2">

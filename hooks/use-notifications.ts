@@ -107,7 +107,7 @@ export function useListerPendingCount(liserId: string | null): number {
   return data?.filter((n) => n.status === "pending").length ?? 0;
 }
 
-// ─── Student notifications
+// ─── Student notifications ────────────────────────────────────────────────────
 
 export interface StudentNotificationItem {
   requestId: string;
@@ -118,6 +118,7 @@ export interface StudentNotificationItem {
   message: string | null;
   createdAt: string;
   updatedAt: string;
+  readAt: string | null; // null = unread
 }
 
 async function fetchStudentNotifications(
@@ -135,6 +136,7 @@ async function fetchStudentNotifications(
       message,
       created_at,
       updated_at,
+      read_at,
       listings(title, city)
     `,
     )
@@ -162,6 +164,7 @@ async function fetchStudentNotifications(
       message: row.message ?? null,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      readAt: row.read_at ?? null,
     };
   });
 }
@@ -177,4 +180,10 @@ export function useStudentNotifications(
     queryFn: () => fetchStudentNotifications(userId!),
     staleTime: 30 * 1000,
   });
+}
+
+// Unread = non-pending AND read_at is null
+export function useStudentUnreadCount(userId: string | null): number {
+  const { data } = useStudentNotifications(userId);
+  return data?.filter((n) => n.readAt === null).length ?? 0;
 }

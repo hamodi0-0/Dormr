@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTransition } from "react";
+import { useTransition, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import {
   Bell,
@@ -29,6 +29,7 @@ import {
 import {
   acceptTenantRequest,
   rejectTenantRequest,
+  markStudentNotificationsRead,
 } from "@/app/actions/tenant-actions";
 import type { TenantRequestStatus } from "@/lib/types/listing";
 
@@ -218,12 +219,18 @@ function ListerNotificationItem({ item }: { item: ListerNotificationItem }) {
 
 function StudentNotificationItem({ item }: { item: StudentNotificationItem }) {
   const isAccepted = item.status === "accepted";
+  const isUnread = item.readAt === null;
 
   return (
     <Link
       href={`/dashboard/listings/${item.listingId}`}
-      className="flex items-start gap-3 px-4 py-4 hover:bg-accent/50 transition-colors group"
+      className="flex items-start gap-3 px-4 py-4 hover:bg-accent/50 transition-colors group relative"
     >
+      {/* Unread dot */}
+      {isUnread && (
+        <span className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+      )}
+
       <div
         className={cn(
           "mt-0.5 shrink-0 w-8 h-8 rounded-full flex items-center justify-center",
@@ -239,7 +246,12 @@ function StudentNotificationItem({ item }: { item: StudentNotificationItem }) {
 
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center gap-2 mb-1">
-          <p className="text-sm font-medium text-foreground">
+          <p
+            className={cn(
+              "text-sm text-foreground",
+              isUnread ? "font-semibold" : "font-medium",
+            )}
+          >
             {item.listingTitle}
           </p>
           <StatusBadge status={item.status} />
@@ -351,10 +363,41 @@ export function StudentNotificationsClient({
   userId,
   initialData,
 }: StudentNotificationsClientProps) {
+  const queryClient = useQueryClient();
   const { data: items = [] } = useStudentNotifications(userId, initialData);
+  const hasMarkedRead = useRef(false);
+
+  // Mark all unread notifications as read on first mount
+  useEffect(() => {
+    if (hasMarkedRead.current) return;
+
+    const unreadIds = items
+      .filter((i) => i.readAt === null)
+      .map((i) => i.requestId);
+
+    if (unreadIds.length === 0) return;
+
+    hasMarkedRead.current = true;
+
+    markStudentNotificationsRead(unreadIds).then(({ error }) => {
+      if (!error) {
+        // Optimistically update local cache so the badge drops immediately
+        queryClient.setQueryData<StudentNotificationItem[]>(
+          ["student-notifications", userId],
+          (old) =>
+            (old ?? []).map((item) =>
+              unreadIds.includes(item.requestId)
+                ? { ...item, readAt: new Date().toISOString() }
+                : item,
+            ),
+        );
+      }
+    });
+  }, [items, userId, queryClient]);
 
   const acceptedItems = items.filter((i) => i.status === "accepted");
   const rejectedItems = items.filter((i) => i.status === "rejected");
+  const unreadCount = items.filter((i) => i.readAt === null).length;
 
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto w-full">
@@ -365,6 +408,12 @@ export function StudentNotificationsClient({
         {items.length > 0 && (
           <p className="text-sm text-muted-foreground mt-0.5">
             {items.length} notification{items.length !== 1 ? "s" : ""}
+            {unreadCount > 0 && (
+              <span className="text-primary font-medium">
+                {" "}
+                · {unreadCount} new
+              </span>
+            )}
           </p>
         )}
       </div>

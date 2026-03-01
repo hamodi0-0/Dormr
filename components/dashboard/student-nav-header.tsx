@@ -18,7 +18,10 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { NotificationBell } from "@/components/notifications/notifications-bell";
-import { useStudentNotifications } from "@/hooks/use-notifications";
+import {
+  useStudentNotifications,
+  useStudentUnreadCount,
+} from "@/hooks/use-notifications";
 import { useStudentProfile } from "@/hooks/use-student-profile";
 
 interface NavItem {
@@ -48,10 +51,9 @@ export function StudentNavHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { data: profile, isLoading } = useStudentProfile();
 
-  const { data: notifications = [] } = useStudentNotifications(
-    profile?.id ?? null,
-  );
-  const resolvedCount = notifications.length;
+  // Only count notifications the student hasn't seen yet
+  const unreadCount = useStudentUnreadCount(profile?.id ?? null);
+
   useEffect(() => {
     if (mobileOpen) {
       document.body.style.overflow = "hidden";
@@ -131,7 +133,7 @@ export function StudentNavHeader() {
         <div className="flex items-center gap-1.5 sm:gap-2">
           <NotificationBell
             href="/dashboard/notifications"
-            count={resolvedCount}
+            count={unreadCount}
           />
 
           <ThemeToggle />

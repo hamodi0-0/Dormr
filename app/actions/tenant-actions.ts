@@ -171,3 +171,25 @@ export async function removeTenant(
   revalidatePath(`/lister/listings/${listingId}/tenants`);
   return { error: null };
 }
+
+export async function markStudentNotificationsRead(
+  requestIds: string[],
+): Promise<{ error: string | null }> {
+  if (requestIds.length === 0) return { error: null };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("tenant_requests")
+    .update({ read_at: new Date().toISOString() })
+    .in("id", requestIds)
+    .eq("requester_id", user.id) // security: only own requests
+    .is("read_at", null); // only update actually unread ones
+
+  if (error) return { error: error.message };
+  return { error: null };
+}
