@@ -18,10 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { NotificationBell } from "@/components/notifications/notifications-bell";
-import {
-  useStudentNotifications,
-  useStudentUnreadCount,
-} from "@/hooks/use-notifications";
+import { useStudentUnreadCount } from "@/hooks/use-notifications";
 import { useStudentProfile } from "@/hooks/use-student-profile";
 
 interface NavItem {

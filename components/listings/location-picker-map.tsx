@@ -10,7 +10,7 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-
+import type { Map as LeafletMap } from "leaflet";
 // ─── Fix Leaflet's broken default icon in bundlers ───────────────────────────
 const MARKER_ICON = L.icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -86,13 +86,20 @@ export function LocationPickerMap({
   const center: [number, number] = hasLocation
     ? [latitude as number, longitude as number]
     : [52.5, -1.5];
+  const mapRef = useRef<LeafletMap | null>(null);
 
   return (
     <MapContainer
+      key={`map-${center[0]}-${center[1]}`} // force remount if center identity changes
       center={center}
       zoom={hasLocation ? 15 : 5}
-      className="h-full w-full"
       scrollWheelZoom
+      ref={(instance) => {
+        if (instance) {
+          mapRef.current = instance;
+        }
+      }}
+      style={{ height: "100%", width: "100%" }}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
