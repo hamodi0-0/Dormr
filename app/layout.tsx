@@ -22,6 +22,9 @@ const lora = Lora({
 });
 
 export const metadata: Metadata = {
+  icons: {
+    icon: "/images/rounded-logo.png",
+  },
   title: "Dormr - Find Your Perfect Roommate",
   description:
     "Connect with compatible university roommates based on lifestyle preferences",

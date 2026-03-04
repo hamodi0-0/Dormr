@@ -5,6 +5,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import Link from "next/link";
 
 import { useAuthStore } from "@/lib/stores/auth-store";
+import Image from "next/image";
 
 export function Header() {
   const setShowLogin = useAuthStore((s) => s.setShowLogin);
@@ -29,13 +30,18 @@ export function Header() {
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-serif font-bold text-lg">
-                D
-              </span>
+          <Link href="/" className="flex items-center gap-3">
+            <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
+              <Image
+                src="/images/transparent-logo.png"
+                alt="Dormr Logo"
+                width={32}
+                height={32}
+              />
             </div>
-            <span className="text-xl font-serif font-medium">Dormr</span>
+            <span className="font-serif font-semibold tracking-[-0.02em] text-3xl logo-serif">
+              Dormr
+            </span>
           </Link>
 
           {/* Navigation */}

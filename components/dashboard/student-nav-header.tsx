@@ -20,6 +20,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { NotificationBell } from "@/components/notifications/notifications-bell";
 import { useStudentUnreadCount } from "@/hooks/use-notifications";
 import { useStudentProfile } from "@/hooks/use-student-profile";
+import Image from "next/image";
 
 interface NavItem {
   href: string;
@@ -79,9 +80,14 @@ export function StudentNavHeader() {
   return (
     <>
       <header className="h-16 border-b border-border bg-background/95 backdrop-blur-sm flex items-center px-4 sm:px-6 shrink-0">
-        <Link href="/dashboard" className="flex items-center gap-2.5 shrink-0">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
-            <Building2 className="h-4 w-4 text-primary-foreground" />
+        <Link href="/dashboard" className="flex items-center shrink-0">
+          <div className=" bg-primary/90 rounded-lg h-7 w-7 flex items-center mr-2 justify-center shrink-0">
+            <Image
+              src="/images/transparent-logo.png"
+              alt="Dormr Logo"
+              width={42}
+              height={42}
+            />
           </div>
           <span className="text-lg font-serif font-medium hidden sm:block">
             Dormr

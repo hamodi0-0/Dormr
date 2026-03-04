@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 export function Footer() {
   const handleNavClick = (
     e: React.MouseEvent<HTMLAnchorElement>,
@@ -21,11 +23,14 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="col-span-1">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-serif font-bold text-lg">
-                  D
-                </span>
+            <div className="flex items-center  mb-4">
+              <div className=" bg-primary/90 rounded-lg h-7 w-7 flex items-center mr-2 justify-center shrink-0">
+                <Image
+                  src="/images/transparent-logo.png"
+                  alt="Dormr Logo"
+                  width={42}
+                  height={42}
+                />
               </div>
               <span className="text-xl font-serif font-medium">Dormr</span>
             </div>

@@ -27,6 +27,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useListerProfile } from "@/hooks/use-lister-profile";
 import { useListerPendingCount } from "@/hooks/use-notifications";
+import Image from "next/image";
 
 interface NavItem {
   href: string;
@@ -104,11 +105,16 @@ export function ListerSidebar() {
           )}
         >
           <Link href="/lister/dashboard" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
-              <Building2 className="h-4 w-4 text-primary-foreground" />
+            <div className=" bg-primary/90 rounded-lg h-7 w-7 flex items-center justify-center shrink-0">
+              <Image
+                src="/images/transparent-logo.png"
+                alt="Dormr Logo"
+                width={42}
+                height={42}
+              />
             </div>
             {isOpen && (
-              <span className="text-lg font-serif font-medium text-sidebar-foreground truncate">
+              <span className="font-serif font-bold text-sidebar-foreground tracking-[-0.02em] text-2xl logo-serif">
                 Dormr
               </span>
             )}
