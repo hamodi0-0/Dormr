@@ -104,17 +104,17 @@ export function ListerSidebar() {
             isOpen ? "px-5" : "justify-center px-0",
           )}
         >
-          <Link href="/lister/dashboard" className="flex items-center gap-2.5">
-            <div className=" bg-primary/90 rounded-lg h-7 w-7 flex items-center justify-center shrink-0">
+          <Link href="/lister/dashboard" className="flex items-center ">
+            <div className=" bg-primary/90 rounded-lg h-8 w-8 flex items-center mr-2 justify-center shrink-0">
               <Image
                 src="/images/transparent-logo.png"
                 alt="Dormr Logo"
-                width={42}
-                height={42}
+                width={36}
+                height={36}
               />
             </div>
             {isOpen && (
-              <span className="font-serif font-bold text-sidebar-foreground tracking-[-0.02em] text-2xl logo-serif">
+              <span className="font-serif font-medium text-foreground text-2xl">
                 Dormr
               </span>
             )}
