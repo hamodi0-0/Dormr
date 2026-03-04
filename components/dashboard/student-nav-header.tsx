@@ -81,15 +81,15 @@ export function StudentNavHeader() {
     <>
       <header className="h-16 border-b border-border bg-background/95 backdrop-blur-sm flex items-center px-4 sm:px-6 shrink-0">
         <Link href="/dashboard" className="flex items-center shrink-0">
-          <div className=" bg-primary/90 rounded-lg h-7 w-7 flex items-center mr-2 justify-center shrink-0">
+          <div className=" bg-primary/90 rounded-lg h-8 w-8 flex items-center mr-2 justify-center shrink-0">
             <Image
               src="/images/transparent-logo.png"
               alt="Dormr Logo"
-              width={42}
-              height={42}
+              width={36}
+              height={36}
             />
           </div>
-          <span className="text-lg font-serif font-medium hidden sm:block">
+          <span className="font-serif font-semibold text-foreground text-2xl">
             Dormr
           </span>
         </Link>
@@ -201,7 +201,9 @@ export function StudentNavHeader() {
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <Building2 className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="text-lg font-serif font-medium">Dormr</span>
+            <span className="font-serif font-medium text-foreground text-3xl">
+              Dormr
+            </span>
           </Link>
           <Button
             variant="ghost"
