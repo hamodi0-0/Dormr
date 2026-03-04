@@ -554,7 +554,7 @@ export function ListingDetailClient({
             </CardHeader>
             <CardContent className="pb-5 px-5 space-y-3">
               {listing.latitude && listing.longitude ? (
-                <div className="rounded-lg overflow-hidden border border-border h-54">
+                <div className="rounded-lg overflow-hidden border border-border h-54 isolate">
                   <ListingDetailMap
                     key={`map-${listing.id}`}
                     latitude={listing.latitude}

@@ -10,6 +10,15 @@ export interface University {
   alpha_two_code: string;
 }
 
+const CUSTOM_UNIVERSITIES: University[] = [
+  {
+    name: "German International University",
+    country: "Egypt",
+    web_pages: ["https://giu-uni.de/"],
+    alpha_two_code: "EG",
+  },
+];
+
 const fetchUniversities = async (query: string): Promise<University[]> => {
   const response = await fetch(
     `http://universities.hipolabs.com/search?name=${encodeURIComponent(query)}`,
@@ -19,14 +28,22 @@ const fetchUniversities = async (query: string): Promise<University[]> => {
     throw new Error(`Failed to fetch universities: ${response.statusText}`);
   }
 
-  const data: University[] = await response.json();
-  return data.slice(0, 10);
+  const apiResults: University[] = await response.json();
+
+  // Merge custom entries that match the query, deduplicating by name
+  const q = query.toLowerCase();
+  const customMatches = CUSTOM_UNIVERSITIES.filter((u) =>
+    u.name.toLowerCase().includes(q),
+  );
+
+  const apiNames = new Set(apiResults.map((u) => u.name.toLowerCase()));
+  const deduped = customMatches.filter(
+    (u) => !apiNames.has(u.name.toLowerCase()),
+  );
+
+  return [...deduped, ...apiResults].slice(0, 10);
 };
 
-/**
- * Searches universities via the Hipolabs API.
- * Data changes frequently based on user input → React Query with debounced key.
- */
 export function useUniversitySearch(query: string) {
   const [debouncedQuery, setDebouncedQuery] = useState(query);
 
@@ -39,6 +56,6 @@ export function useUniversitySearch(query: string) {
     queryKey: ["universities", debouncedQuery],
     queryFn: () => fetchUniversities(debouncedQuery),
     enabled: debouncedQuery.length >= 2,
-    staleTime: 1000 * 60 * 5, // 5 min – results are stable enough to cache
+    staleTime: 1000 * 60 * 5,
   });
 }

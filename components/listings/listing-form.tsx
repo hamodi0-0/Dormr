@@ -28,6 +28,8 @@ import { useUpdateListingMutation } from "@/hooks/use-update-listing-mutation";
 import { createClient } from "@/lib/supabase/client";
 import type { Listing, ListingImage, BillingPeriod } from "@/lib/types/listing";
 import { BILLING_PERIOD_LABELS } from "@/lib/types/listing";
+import { useUniversitySearch } from "@/hooks/use-university-search";
+import { Loader2 as SearchLoader } from "lucide-react";
 
 import {
   Form,
@@ -159,6 +161,13 @@ async function removeImageFromStorage(
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ListingForm({ mode, listing }: ListingFormProps) {
+  const [universityQuery, setUniversityQuery] = useState(
+    listing?.university_name ?? "",
+  );
+  const [showUniversityDropdown, setShowUniversityDropdown] = useState(false);
+  const { data: universities = [], isLoading: isSearchingUniversities } =
+    useUniversitySearch(universityQuery);
+
   const router = useRouter();
   const createMutation = useCreateListingMutation();
   const updateMutation = useUpdateListingMutation();
@@ -831,10 +840,63 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                       </span>
                     </FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="e.g. University of Manchester"
-                        {...field}
-                      />
+                      <div className="relative">
+                        <Input
+                          placeholder="Search for a university…"
+                          value={universityQuery}
+                          onChange={(e) => {
+                            setUniversityQuery(e.target.value);
+                            field.onChange(e.target.value);
+                            setShowUniversityDropdown(
+                              e.target.value.length >= 2,
+                            );
+                          }}
+                          onFocus={() =>
+                            universityQuery.length >= 2 &&
+                            setShowUniversityDropdown(true)
+                          }
+                          onBlur={() =>
+                            setTimeout(
+                              () => setShowUniversityDropdown(false),
+                              150,
+                            )
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && universities.length > 0) {
+                              const first = universities[0].name;
+                              setUniversityQuery(first);
+                              field.onChange(first);
+                              setShowUniversityDropdown(false);
+                            }
+                          }}
+                        />
+                        {isSearchingUniversities && (
+                          <SearchLoader className="absolute right-3 top-3 h-4 w-4 animate-spin text-muted-foreground" />
+                        )}
+                        {showUniversityDropdown && universities.length > 0 && (
+                          <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-auto p-1">
+                            {universities.map((uni, idx) => (
+                              <div
+                                key={idx}
+                                className="px-3 py-2 hover:bg-accent rounded-sm cursor-pointer"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  setUniversityQuery(uni.name);
+                                  field.onChange(uni.name);
+                                  setShowUniversityDropdown(false);
+                                }}
+                              >
+                                <div className="text-sm font-medium">
+                                  {uni.name}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {uni.country}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
