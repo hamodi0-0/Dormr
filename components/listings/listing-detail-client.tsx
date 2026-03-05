@@ -46,6 +46,10 @@ import { NoTenantsPrompt } from "@/components/tenants/no-tenants-prompt";
 import { TenantRequestButton } from "@/components/tenants/tenant-request-button";
 import { TenantCountBadge } from "@/components/tenants/tenant-count-badge";
 
+import { CompatibilitySection } from "@/components/compatibility/compatibility-section";
+import { useStudentProfile } from "@/hooks/use-student-profile";
+import type { TenantCompatibilityProfile } from "@/lib/types/compatibility";
+
 interface ListingDetailClientProps {
   listing: Listing;
   tenantCount: number;
@@ -322,6 +326,8 @@ export function ListingDetailClient({
   tenantCount,
   userId,
 }: ListingDetailClientProps) {
+  const { data: viewerProfile } = useStudentProfile();
+
   const [descExpanded, setDescExpanded] = useState(false);
 
   const images = listing.listing_images ?? [];
@@ -540,6 +546,14 @@ export function ListingDetailClient({
             </Card>
           )}
 
+          {viewerProfile && (
+            <CompatibilitySection
+              viewerProfile={viewerProfile}
+              tenants={
+                (listing.tenantProfiles ?? []) as TenantCompatibilityProfile[]
+              }
+            />
+          )}
           {/* ── Tenants section (multi-occupant listings only) ── */}
           <TenantsSection
             listing={listing}

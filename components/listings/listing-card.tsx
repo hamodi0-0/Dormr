@@ -30,10 +30,14 @@ import { cn } from "@/lib/utils";
 import type { Listing } from "@/lib/types/listing";
 import { ROOM_TYPE_LABELS, BILLING_PERIOD_SUFFIX } from "@/lib/types/listing";
 import type { ListingImage } from "@/lib/types/listing";
+import { CompatibilityBadge } from "@/components/compatibility/compatibility-badge";
+import { useCompatibility } from "@/hooks/use-compatibility";
+import type { TenantCompatibilityProfile } from "@/lib/types/compatibility";
 
 interface ListingCardProps {
   listing: Listing;
-  className?: string;
+  tenantProfiles?: TenantCompatibilityProfile[]; // <-- add this
+  viewerProfile?: TenantCompatibilityProfile | null; // <-- add this
 }
 
 // ─── Image Carousel ───────────────────────────────────────────────────────────
@@ -175,7 +179,11 @@ function ImageCarousel({ images, listingId, title }: ImageCarouselProps) {
 
 // ─── Main Card ────────────────────────────────────────────────────────────────
 
-export function ListingCard({ listing, className }: ListingCardProps) {
+export function ListingCard({
+  listing,
+  tenantProfiles,
+  viewerProfile,
+}: ListingCardProps) {
   const images = listing.listing_images ?? [];
   const priceSuffix = BILLING_PERIOD_SUFFIX[listing.billing_period] ?? "/mo";
   const postedAgo = formatDistanceToNow(new Date(listing.created_at), {
@@ -185,6 +193,10 @@ export function ListingCard({ listing, className }: ListingCardProps) {
   const locationParts = [listing.address_line, listing.city]
     .filter(Boolean)
     .join(", ");
+  const compatResult = useCompatibility(
+    viewerProfile ?? null,
+    tenantProfiles ?? [],
+  );
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -193,7 +205,6 @@ export function ListingCard({ listing, className }: ListingCardProps) {
           "bg-card border border-border rounded-xl overflow-hidden",
           "shadow-sm hover:shadow-md transition-all duration-200",
           "flex flex-col",
-          className,
         )}
       >
         {/* ── Card body: image + content ─────────────────────────────────── */}
@@ -225,6 +236,13 @@ export function ListingCard({ listing, className }: ListingCardProps) {
                 {priceSuffix}
               </span>
             </div>
+
+            {listing.max_occupants > 1 && viewerProfile !== undefined && (
+              <CompatibilityBadge
+                score={compatResult?.overallScore ?? null}
+                tenantCount={tenantProfiles?.length ?? 0}
+              />
+            )}
 
             {/* Title */}
             <Link
