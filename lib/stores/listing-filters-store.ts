@@ -1,40 +1,32 @@
 import { create } from "zustand";
+import type { RoomType, GenderPreference } from "@/lib/types/listing";
 
-export type RoomType =
-  | "single"
-  | "shared"
-  | "studio"
-  | "entire_apartment"
-  | null;
-export type GenderPreference =
-  | "male_only"
-  | "female_only"
-  | "no_preference"
-  | null;
+// Re-export so existing imports like `import type { RoomType } from "@/lib/stores/listing-filters-store"` keep working
+export type { RoomType, GenderPreference };
 
 interface ListingFiltersState {
   searchQuery: string;
-  roomType: RoomType;
+  roomType: RoomType | null;
   maxPrice: number | null;
   amenities: string[];
-  genderPreference: GenderPreference;
+  genderPreference: GenderPreference | null;
   university: string | null;
 
   setSearchQuery: (query: string) => void;
-  setRoomType: (roomType: RoomType) => void;
+  setRoomType: (roomType: RoomType | null) => void;
   setMaxPrice: (price: number | null) => void;
   toggleAmenity: (amenity: string) => void;
-  setGenderPreference: (pref: GenderPreference) => void;
+  setGenderPreference: (pref: GenderPreference | null) => void;
   setUniversity: (university: string | null) => void;
   resetFilters: () => void;
 }
 
 const initialState = {
   searchQuery: "",
-  roomType: null as RoomType,
+  roomType: null as RoomType | null,
   maxPrice: null as number | null,
   amenities: [] as string[],
-  genderPreference: null as GenderPreference,
+  genderPreference: null as GenderPreference | null,
   university: null as string | null,
 };
 
