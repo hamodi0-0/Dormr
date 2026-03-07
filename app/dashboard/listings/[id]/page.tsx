@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import { ListingDetailClient } from "@/components/listings/listing-detail-client";
 import type { Listing } from "@/lib/types/listing";
+import type { TenantCompatibilityProfile } from "@/lib/types/compatibility";
 
 interface ListingDetailPageProps {
   params: Promise<{ id: string }>;
@@ -20,7 +21,7 @@ export default async function ListingDetailPage({
   if (!user) redirect("/");
   if (user.user_metadata?.user_type !== "student") redirect("/");
 
-  const [listingResult, tenantCountResult] = await Promise.all([
+  const [listingResult, tenantRowsResult] = await Promise.all([
     supabase
       .from("listings")
       .select(
@@ -41,18 +42,32 @@ export default async function ListingDetailPage({
       .eq("status", "active")
       .single(),
 
-    supabase
-      .from("listing_tenants")
-      .select("*", { count: "exact", head: true })
-      .eq("listing_id", id),
+    supabase.from("listing_tenants").select("user_id").eq("listing_id", id),
   ]);
 
   if (listingResult.error || !listingResult.data) notFound();
 
+  const tenantUserIds = (tenantRowsResult.data ?? []).map((r) => r.user_id);
+  const tenantCount = tenantUserIds.length;
+
+  let tenantProfiles: TenantCompatibilityProfile[] = [];
+
+  if (tenantUserIds.length > 0) {
+    const { data: profileRows } = await supabase
+      .from("student_profiles")
+      .select(
+        "id, sleep_schedule, cleanliness, noise_level, guests_frequency, smoking, pets, major, hobbies",
+      )
+      .in("id", tenantUserIds);
+
+    tenantProfiles = (profileRows ?? []) as TenantCompatibilityProfile[];
+  }
+
   return (
     <ListingDetailClient
       listing={listingResult.data as Listing}
-      tenantCount={tenantCountResult.count ?? 0}
+      tenantCount={tenantCount}
+      tenantProfiles={tenantProfiles}
       userId={user.id}
     />
   );

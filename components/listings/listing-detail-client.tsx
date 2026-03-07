@@ -45,7 +45,6 @@ import { AnonymousTenantCard } from "@/components/tenants/anonymous-tenant-card"
 import { NoTenantsPrompt } from "@/components/tenants/no-tenants-prompt";
 import { TenantRequestButton } from "@/components/tenants/tenant-request-button";
 import { TenantCountBadge } from "@/components/tenants/tenant-count-badge";
-
 import { CompatibilitySection } from "@/components/compatibility/compatibility-section";
 import { useStudentProfile } from "@/hooks/use-student-profile";
 import type { TenantCompatibilityProfile } from "@/lib/types/compatibility";
@@ -53,6 +52,7 @@ import type { TenantCompatibilityProfile } from "@/lib/types/compatibility";
 interface ListingDetailClientProps {
   listing: Listing;
   tenantCount: number;
+  tenantProfiles: TenantCompatibilityProfile[];
   userId: string;
 }
 
@@ -168,30 +168,6 @@ function ImageGallery({ images }: { images: ListingImage[] }) {
               )}
             </div>
           ))}
-          {thumbnails.length === 0 && images.length > 1 && (
-            <div
-              className="flex-1 relative cursor-pointer bg-muted flex items-center justify-center"
-              onClick={() => {
-                setActiveIdx(1);
-                setGalleryOpen(true);
-              }}
-            >
-              <span className="text-xs text-muted-foreground">View more</span>
-            </div>
-          )}
-        </div>
-
-        <div className="absolute bottom-3 right-3 z-10 pointer-events-none">
-          <button
-            className="pointer-events-auto flex items-center gap-1.5 px-2.5 py-1 bg-black/60 text-white text-xs font-medium rounded-full backdrop-blur-sm hover:bg-black/75 transition-colors"
-            onClick={() => {
-              setActiveIdx(0);
-              setGalleryOpen(true);
-            }}
-          >
-            <Images className="h-3.5 w-3.5" />
-            {images.length} photos
-          </button>
         </div>
       </div>
 
@@ -277,8 +253,6 @@ function TenantsSection({
   userId: string;
 }) {
   const isMultiOccupant = listing.max_occupants > 1;
-
-  // Single-occupant listings don't have tenant/compatibility features
   if (!isMultiOccupant) return null;
 
   return (
@@ -297,7 +271,6 @@ function TenantsSection({
       </CardHeader>
 
       <CardContent className="px-5 pb-5 pt-4 space-y-4">
-        {/* Anonymous tenant cards or empty state */}
         {tenantCount > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {Array.from({ length: tenantCount }).map((_, i) => (
@@ -308,7 +281,6 @@ function TenantsSection({
           <NoTenantsPrompt variant="student" />
         )}
 
-        {/* Tenant request button — hidden if listing is full */}
         {tenantCount < listing.max_occupants && (
           <div className="pt-1">
             <TenantRequestButton listingId={listing.id} userId={userId} />
@@ -324,10 +296,10 @@ function TenantsSection({
 export function ListingDetailClient({
   listing,
   tenantCount,
+  tenantProfiles,
   userId,
 }: ListingDetailClientProps) {
   const { data: viewerProfile } = useStudentProfile();
-
   const [descExpanded, setDescExpanded] = useState(false);
 
   const images = listing.listing_images ?? [];
@@ -363,7 +335,6 @@ export function ListingDetailClient({
 
   return (
     <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-      {/* Back link */}
       <Link
         href="/dashboard/listings"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-5"
@@ -372,16 +343,13 @@ export function ListingDetailClient({
         Back to listings
       </Link>
 
-      {/* Image Gallery */}
       <div className="relative mb-6">
         <ImageGallery images={images} />
       </div>
 
-      {/* Main layout: content + sticky sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 xl:gap-8">
         {/* ── LEFT ── */}
         <div className="space-y-5 min-w-0">
-          {/* Price + quick stats */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-baseline gap-1">
               <span className="text-3xl sm:text-4xl font-serif font-semibold text-foreground">
@@ -410,7 +378,6 @@ export function ListingDetailClient({
             </div>
           </div>
 
-          {/* Subtitle + Title */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
               {ROOM_TYPE_LABELS[listing.room_type]} · {listing.city}
@@ -431,7 +398,6 @@ export function ListingDetailClient({
 
           <div className="border-t border-border/50" />
 
-          {/* Description */}
           {listing.description && (
             <div>
               <h2 className="text-sm font-semibold text-foreground mb-2">
@@ -461,7 +427,6 @@ export function ListingDetailClient({
             </div>
           )}
 
-          {/* Property Details */}
           <Card className="py-0">
             <CardHeader className="pt-5 pb-0 px-5">
               <CardTitle className="text-sm font-semibold">
@@ -518,7 +483,6 @@ export function ListingDetailClient({
             </CardContent>
           </Card>
 
-          {/* Amenities */}
           {activeAmenities.length > 0 && (
             <Card className="py-0">
               <CardHeader className="pt-5 pb-0 px-5">
@@ -546,22 +510,20 @@ export function ListingDetailClient({
             </Card>
           )}
 
-          {viewerProfile && (
+          {/* Compatibility — only shown when viewer profile is loaded */}
+          {viewerProfile && listing.max_occupants > 1 && (
             <CompatibilitySection
               viewerProfile={viewerProfile}
-              tenants={
-                (listing.tenantProfiles ?? []) as TenantCompatibilityProfile[]
-              }
+              tenants={tenantProfiles}
             />
           )}
-          {/* ── Tenants section (multi-occupant listings only) ── */}
+
           <TenantsSection
             listing={listing}
             tenantCount={tenantCount}
             userId={userId}
           />
 
-          {/* Location */}
           <Card className="py-0">
             <CardHeader className="pt-5 pb-0 px-5">
               <CardTitle className="text-sm font-semibold">Location</CardTitle>
@@ -611,7 +573,6 @@ export function ListingDetailClient({
 
         {/* ── RIGHT: Sticky Sidebar ── */}
         <div className="lg:sticky lg:top-20 self-start space-y-4">
-          {/* Price card */}
           <Card className="py-0">
             <CardContent className="p-5 space-y-4">
               <div>
@@ -689,7 +650,6 @@ export function ListingDetailClient({
             </CardContent>
           </Card>
 
-          {/* Safety card */}
           <Card className="py-0 border-primary/20 bg-primary/5">
             <CardContent className="p-4">
               <div className="flex items-start gap-2.5">
@@ -707,7 +667,6 @@ export function ListingDetailClient({
             </CardContent>
           </Card>
 
-          {/* University target */}
           {listing.university_name && (
             <Card className="py-0">
               <CardContent className="p-4">

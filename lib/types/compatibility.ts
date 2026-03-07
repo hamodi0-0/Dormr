@@ -1,6 +1,6 @@
 export interface TenantCompatibilityProfile {
   sleep_schedule: "early_bird" | "night_owl" | "flexible";
-  cleanliness: 1 | 2 | 3 | 4 | 5;
+  cleanliness: number;
   noise_level: "quiet" | "moderate" | "social";
   guests_frequency: "rarely" | "sometimes" | "often";
   smoking: boolean;

@@ -66,15 +66,5 @@ export default async function BrowsePage() {
     totalCount: count ?? 0,
   };
 
-  return (
-    <main className="container mx-auto px-4 py-8 max-w-7xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Find your next home</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Browse student-friendly listings near your university
-        </p>
-      </div>
-      <ListingsGridClient initialData={initialData} />
-    </main>
-  );
+  return <ListingsGridClient initialData={initialData} />;
 }

@@ -36,7 +36,7 @@ export function CompatibilityBadge({
   const colors = SCORE_TIER_CLASSES[tier];
 
   return (
-    <div className={cn("flex flex-col items-start gap-0.5", className)}>
+    <div className={cn("flex flex-col items-center gap-0.5", className)}>
       <div
         className={cn(
           "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-xs font-semibold",

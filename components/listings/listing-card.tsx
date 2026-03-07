@@ -202,7 +202,7 @@ export function ListingCard({
     <TooltipProvider delayDuration={300}>
       <div
         className={cn(
-          "bg-card border border-border rounded-xl overflow-hidden",
+          "bg-card border border-border rounded-xl overflow-hidden my-2",
           "shadow-sm hover:shadow-md transition-all duration-200",
           "flex flex-col",
         )}
@@ -225,6 +225,12 @@ export function ListingCard({
               <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
                 {roomTypeLabel}
               </span>
+              {listing.max_occupants > 1 && viewerProfile !== undefined && (
+                <CompatibilityBadge
+                  score={compatResult?.overallScore ?? null}
+                  tenantCount={tenantProfiles?.length ?? 0}
+                />
+              )}
             </div>
 
             {/* Price */}
@@ -236,13 +242,6 @@ export function ListingCard({
                 {priceSuffix}
               </span>
             </div>
-
-            {listing.max_occupants > 1 && viewerProfile !== undefined && (
-              <CompatibilityBadge
-                score={compatResult?.overallScore ?? null}
-                tenantCount={tenantProfiles?.length ?? 0}
-              />
-            )}
 
             {/* Title */}
             <Link
