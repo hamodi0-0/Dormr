@@ -7,21 +7,20 @@ import {
 } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { Listing } from "@/lib/types/listing";
+import type { Listing, RoomType, GenderPreference } from "@/lib/types/listing";
 import type { TenantCompatibilityProfile } from "@/lib/types/compatibility";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ListingFiltersQuery {
   search: string;
-  roomType: string | null;
+  roomType: RoomType | null;
   maxPrice: number | null;
-  genderPreference: string | null;
+  genderPreference: GenderPreference | null;
 }
 
 export interface ListingsPageResult {
   listings: Listing[];
-  /** listing_id → compatibility profiles of confirmed tenants */
   tenantProfiles: Record<string, TenantCompatibilityProfile[]>;
   totalCount: number;
 }
@@ -30,7 +29,7 @@ export interface ListingsPageResult {
 
 export const PAGE_SIZE = 10;
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 export function isEmptyFilters(f: ListingFiltersQuery): boolean {
   return !f.search && !f.roomType && f.maxPrice === null && !f.genderPreference;
@@ -46,7 +45,6 @@ async function fetchListingsPage(
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
-  // Build base query
   let q = supabase
     .from("listings")
     .select(
@@ -62,7 +60,6 @@ async function fetchListingsPage(
     .order("created_at", { ascending: false })
     .range(from, to);
 
-  // Server-side filters
   if (filters.search) {
     const s = filters.search.trim();
     q = q.or(
@@ -80,11 +77,10 @@ async function fetchListingsPage(
   }
 
   const { data: listingRows, count, error } = await q;
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 
   const listings = (listingRows ?? []) as Listing[];
 
-  // ── Batch-fetch tenant compatibility profiles ─────────────────────────────
   const multiOccupantIds = listings
     .filter((l) => l.max_occupants > 1)
     .map((l) => l.id);
@@ -135,21 +131,16 @@ export function usePublicListingsPage(
 ) {
   const queryClient = useQueryClient();
 
+  const isFirstPageNoFilters = page === 1 && isEmptyFilters(filters);
+
   const query = useQuery<ListingsPageResult>({
     queryKey: ["public-listings-page", page, filters],
     queryFn: () => fetchListingsPage(page, filters),
-    // Only hydrate from server data on the first, unfiltered page
-    initialData:
-      page === 1 && isEmptyFilters(filters) ? initialData : undefined,
-    initialDataUpdatedAt:
-      page === 1 && isEmptyFilters(filters) && initialData
-        ? Date.now()
-        : undefined,
+    initialData: isFirstPageNoFilters ? initialData : undefined,
     staleTime: 30 * 1000,
     placeholderData: keepPreviousData,
   });
 
-  // Prefetch the next page while viewing the current one
   useEffect(() => {
     const total = query.data?.totalCount ?? 0;
     if (page * PAGE_SIZE < total) {
