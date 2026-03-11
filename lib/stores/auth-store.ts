@@ -47,7 +47,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
           set({ isOnboarded: profile?.profile_completed ?? false });
         } else {
-          await supabase.auth.signOut();
+          // Non-student user (lister or unknown) — don't sign them out,
+          // just mark as not-logged-in for the landing page UI.
+          // Signing out here would break lister sessions if they ever
+          // visit the landing page.
           set({ isLoggedIn: false, isOnboarded: false });
         }
       } else {

@@ -44,6 +44,11 @@ export async function GET(request: Request) {
       data: { user_type: "lister" },
     });
 
+    // Force session refresh so the redirect carries a JWT with the
+    // updated user_type claim — without this the middleware would read
+    // the stale token and sign the user out.
+    await supabase.auth.refreshSession();
+
     // Upsert lister_profiles from Google-provided data
     const { error: profileError } = await supabase
       .from("lister_profiles")

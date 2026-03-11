@@ -48,7 +48,33 @@ export async function updateSession(request: NextRequest) {
 
   // If user is logged in, handle routing based on user type
   if (user) {
-    const userType = user.user_metadata?.user_type as string | undefined;
+    let userType = user.user_metadata?.user_type as string | undefined;
+
+    // ── DB fallback when JWT claims are stale ─────────────────────────
+    // Right after OAuth the JWT may not yet contain the updated
+    // user_type.  Fall back to checking profile tables so we don't
+    // incorrectly sign the user out.
+    if (!userType && !isPublicPath) {
+      const { data: listerProfile } = await supabase
+        .from("lister_profiles")
+        .select("id")
+        .eq("id", user.sub)
+        .single();
+
+      if (listerProfile) {
+        userType = "lister";
+      } else {
+        const { data: studentProfile } = await supabase
+          .from("student_profiles")
+          .select("id")
+          .eq("id", user.sub)
+          .single();
+
+        if (studentProfile) {
+          userType = "student";
+        }
+      }
+    }
 
     // ============================================
     // STUDENT ROUTES
@@ -86,7 +112,7 @@ export async function updateSession(request: NextRequest) {
     }
 
     // ============================================
-    // LISTER ROUTES (Future Implementation)
+    // LISTER ROUTES
     // ============================================
     else if (userType === "lister") {
       // Check lister profile existence
@@ -124,10 +150,11 @@ export async function updateSession(request: NextRequest) {
     }
 
     // ============================================
-    // UNKNOWN USER TYPE (Shouldn't happen)
+    // UNKNOWN USER TYPE
     // ============================================
     else {
-      // If user has no user_type, sign them out and redirect to landing
+      // JWT has no user_type AND no profile row exists in either table.
+      // This is a genuinely orphaned auth record — sign out.
       if (!isPublicPath) {
         await supabase.auth.signOut();
         const url = request.nextUrl.clone();
