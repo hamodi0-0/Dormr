@@ -16,7 +16,6 @@ import {
   Camera,
   Heart,
   Calendar,
-  ArrowRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
