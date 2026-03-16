@@ -59,14 +59,13 @@ export default async function ListingDetailPage({
     const { data: profileRows } = await supabase
       .from("student_profiles")
       .select(
-        "id, sleep_schedule, cleanliness, noise_level, guests_frequency, smoking, pets, major, hobbies",
+        "sleep_schedule, cleanliness, noise_level, guests_frequency, smoking, pets, major, hobbies",
       )
-      .in("id", tenantUserIds);
+      .in("id", tenantUserIds)
+      .neq("id", user.id);
 
     // Exclude the viewer's own profile — compatibility is with *other* tenants
-    tenantProfiles = (profileRows ?? [])
-      .filter((p) => p.id !== user.id)
-      .map(({ id: _id, ...rest }) => rest) as TenantCompatibilityProfile[];
+    tenantProfiles = (profileRows ?? []) as TenantCompatibilityProfile[];
   }
 
   return (

@@ -244,7 +244,6 @@ function StatBadge({
 
 export function ListingDetailClient({
   listing,
-  tenantCount,
   tenantProfiles,
   userId,
   isViewerTenant,

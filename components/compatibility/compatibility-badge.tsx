@@ -24,7 +24,7 @@ export function CompatibilityBadge({
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border-1 shrink-0",
+        "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border shrink-0",
         colors.bg,
         colors.border,
         className,

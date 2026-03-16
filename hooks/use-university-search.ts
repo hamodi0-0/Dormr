@@ -21,7 +21,7 @@ const CUSTOM_UNIVERSITIES: University[] = [
 
 const fetchUniversities = async (query: string): Promise<University[]> => {
   const response = await fetch(
-    `http://universities.hipolabs.com/search?name=${encodeURIComponent(query)}`,
+    `/api/universities?name=${encodeURIComponent(query)}`,
   );
 
   if (!response.ok) {
