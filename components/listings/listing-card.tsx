@@ -220,8 +220,8 @@ export function ListingCard({
 
           {/* Content */}
           <div className="flex-1 p-4 sm:p-5 flex flex-col gap-3 min-w-0">
-            {/* Top row: room type badge */}
-            <div className="flex items-start justify-between gap-2">
+            {/* Top row: room type badge + compatibility */}
+            <div className="flex items-start justify-between gap-2 flex-wrap">
               <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
                 {roomTypeLabel}
               </span>
@@ -332,17 +332,6 @@ export function ListingCard({
               </TooltipTrigger>
               <TooltipContent>Save listing (coming soon)</TooltipContent>
             </Tooltip>
-
-            <Link href={`/dashboard/listings/${listing.id}`}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1 text-xs text-primary hover:text-primary hover:bg-primary/10"
-              >
-                <span>Details</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            </Link>
           </div>
         </div>
       </div>

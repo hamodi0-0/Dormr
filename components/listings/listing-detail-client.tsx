@@ -41,10 +41,7 @@ import {
   BILLING_PERIOD_SUFFIX,
   GENDER_PREFERENCE_LABELS,
 } from "@/lib/types/listing";
-import { AnonymousTenantCard } from "@/components/tenants/anonymous-tenant-card";
-import { NoTenantsPrompt } from "@/components/tenants/no-tenants-prompt";
 import { TenantRequestButton } from "@/components/tenants/tenant-request-button";
-import { TenantCountBadge } from "@/components/tenants/tenant-count-badge";
 import { CompatibilitySection } from "@/components/compatibility/compatibility-section";
 import { useStudentProfile } from "@/hooks/use-student-profile";
 import type { TenantCompatibilityProfile } from "@/lib/types/compatibility";
@@ -52,8 +49,10 @@ import type { TenantCompatibilityProfile } from "@/lib/types/compatibility";
 interface ListingDetailClientProps {
   listing: Listing;
   tenantCount: number;
+  /** Other tenants only — viewer's profile already filtered out server-side */
   tenantProfiles: TenantCompatibilityProfile[];
   userId: string;
+  isViewerTenant: boolean;
 }
 
 const ListingDetailMap = dynamic(
@@ -241,56 +240,6 @@ function StatBadge({
   );
 }
 
-// ─── Tenants Section ──────────────────────────────────────────────────────────
-
-function TenantsSection({
-  listing,
-  tenantCount,
-  userId,
-}: {
-  listing: Listing;
-  tenantCount: number;
-  userId: string;
-}) {
-  const isMultiOccupant = listing.max_occupants > 1;
-  if (!isMultiOccupant) return null;
-
-  return (
-    <Card className="py-0">
-      <CardHeader className="pt-5 pb-0 px-5">
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Users className="h-4 w-4 text-primary" />
-            Tenants
-          </CardTitle>
-          <TenantCountBadge
-            tenantCount={tenantCount}
-            maxOccupants={listing.max_occupants}
-          />
-        </div>
-      </CardHeader>
-
-      <CardContent className="px-5 pb-5 pt-4 space-y-4">
-        {tenantCount > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {Array.from({ length: tenantCount }).map((_, i) => (
-              <AnonymousTenantCard key={i} index={i + 1} />
-            ))}
-          </div>
-        ) : (
-          <NoTenantsPrompt variant="student" />
-        )}
-
-        {tenantCount < listing.max_occupants && (
-          <div className="pt-1">
-            <TenantRequestButton listingId={listing.id} userId={userId} />
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function ListingDetailClient({
@@ -298,6 +247,7 @@ export function ListingDetailClient({
   tenantCount,
   tenantProfiles,
   userId,
+  isViewerTenant,
 }: ListingDetailClientProps) {
   const { data: viewerProfile } = useStudentProfile();
   const [descExpanded, setDescExpanded] = useState(false);
@@ -510,19 +460,20 @@ export function ListingDetailClient({
             </Card>
           )}
 
-          {/* Compatibility — only shown when viewer profile is loaded */}
-          {viewerProfile && listing.max_occupants > 1 && (
+          {/* Compatibility section — handles all states internally */}
+          {viewerProfile && (
             <CompatibilitySection
               viewerProfile={viewerProfile}
               tenants={tenantProfiles}
+              isViewerTenant={isViewerTenant}
+              maxOccupants={listing.max_occupants}
             />
           )}
 
-          <TenantsSection
-            listing={listing}
-            tenantCount={tenantCount}
-            userId={userId}
-          />
+          {/* Request to join — for multi-occupancy listings */}
+          {listing.max_occupants > 1 && (
+            <TenantRequestButton listingId={listing.id} userId={userId} />
+          )}
 
           <Card className="py-0">
             <CardHeader className="pt-5 pb-0 px-5">
@@ -649,7 +600,6 @@ export function ListingDetailClient({
               </div>
             </CardContent>
           </Card>
-
           <Card className="py-0 border-primary/20 bg-primary/5">
             <CardContent className="p-4">
               <div className="flex items-start gap-2.5">

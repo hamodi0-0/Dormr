@@ -50,6 +50,9 @@ export default async function ListingDetailPage({
   const tenantUserIds = (tenantRowsResult.data ?? []).map((r) => r.user_id);
   const tenantCount = tenantUserIds.length;
 
+  // Whether the current student is already listed as a tenant
+  const isViewerTenant = tenantUserIds.includes(user.id);
+
   let tenantProfiles: TenantCompatibilityProfile[] = [];
 
   if (tenantUserIds.length > 0) {
@@ -60,7 +63,10 @@ export default async function ListingDetailPage({
       )
       .in("id", tenantUserIds);
 
-    tenantProfiles = (profileRows ?? []) as TenantCompatibilityProfile[];
+    // Exclude the viewer's own profile — compatibility is with *other* tenants
+    tenantProfiles = (profileRows ?? [])
+      .filter((p) => p.id !== user.id)
+      .map(({ id: _id, ...rest }) => rest) as TenantCompatibilityProfile[];
   }
 
   return (
@@ -69,6 +75,7 @@ export default async function ListingDetailPage({
       tenantCount={tenantCount}
       tenantProfiles={tenantProfiles}
       userId={user.id}
+      isViewerTenant={isViewerTenant}
     />
   );
 }
