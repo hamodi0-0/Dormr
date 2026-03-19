@@ -1,15 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import {
-  User,
-  GraduationCap,
-  Moon,
-  Sparkles,
-  MapPin,
-  LogOut,
-} from "lucide-react";
+import { User, GraduationCap, Moon, Sparkles, MapPin } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -31,8 +23,6 @@ import { EditableHobbies } from "@/components/dashboard/editable-hobbies";
 import { AvatarUpload } from "@/components/dashboard/avatar-upload";
 import { COMMON_MAJORS } from "@/lib/constants";
 import { useUniversitySearch } from "@/hooks/use-university-search";
-import { Button } from "../ui/button";
-import { createClient } from "@/lib/supabase/client";
 
 // ─── Label maps ─────────────────────────────────────────────────────────────
 
@@ -111,7 +101,6 @@ export function ProfilePageClient({
   userEmail,
 }: ProfilePageClientProps) {
   const { data: profile } = useStudentProfile(initialProfile);
-  const router = useRouter();
   const {
     mutate: updateProfile,
     isPending,
@@ -420,21 +409,6 @@ export function ProfilePageClient({
           />
         </CardContent>
       </Card>
-      <div className="mt-auto  pt-12 pb-8 flex justify-center">
-        <Button
-          className="w-md h-11 text-md font-bold cursor-pointer"
-          onClick={async () => {
-            const supabase = createClient();
-            await supabase.auth.signOut();
-            toast.success("Logged out successfully");
-            router.push("/");
-            router.refresh();
-          }}
-        >
-          <LogOut className="h-4 w-4 mr-2 font-bold" />
-          Sign Out
-        </Button>
-      </div>
     </main>
   );
 }
