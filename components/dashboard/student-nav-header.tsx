@@ -21,7 +21,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { NotificationBell } from "@/components/notifications/notifications-bell";
 import { useStudentUnreadCount } from "@/hooks/use-notifications";
 import { useStudentProfile } from "@/hooks/use-student-profile";
@@ -228,9 +227,8 @@ export function StudentNavHeader() {
           <NotificationBell
             href="/dashboard/notifications"
             count={unreadCount}
+            className="hidden md:inline-flex"
           />
-
-          <ThemeToggle />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -298,10 +296,10 @@ export function StudentNavHeader() {
       {/* Mobile Drawer */}
       <aside
         className={cn(
-          "fixed top-0 left-0 z-50 h-full w-72 bg-background border-r border-border shadow-2xl",
+          "fixed top-0 right-0 z-50 h-full w-72 bg-background border-l border-border shadow-2xl",
           "flex flex-col",
           "transition-transform duration-300 ease-in-out md:hidden",
-          mobileOpen ? "translate-x-0" : "-translate-x-full",
+          mobileOpen ? "translate-x-0" : "translate-x-full",
         )}
         aria-modal="true"
         role="dialog"

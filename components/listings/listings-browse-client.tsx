@@ -345,7 +345,7 @@ export function ListingsGridClient({ initialData }: ListingsGridClientProps) {
               )}
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 overflow-x-auto flex-nowrap pb-1">
               <Select
                 value={filters.roomType ?? "all"}
                 onValueChange={(v) =>
@@ -354,7 +354,7 @@ export function ListingsGridClient({ initialData }: ListingsGridClientProps) {
                   })
                 }
               >
-                <SelectTrigger className="h-8 text-xs w-auto min-w-27.5">
+                <SelectTrigger className="h-8 text-xs w-auto min-w-27.5 shrink-0">
                   <SlidersHorizontal className="h-3 w-3 mr-1 text-muted-foreground shrink-0" />
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
@@ -377,7 +377,7 @@ export function ListingsGridClient({ initialData }: ListingsGridClientProps) {
                   })
                 }
               >
-                <SelectTrigger className="h-8 text-xs w-auto min-w-25">
+                <SelectTrigger className="h-8 text-xs w-auto min-w-25 shrink-0">
                   <SelectValue placeholder="Price" />
                 </SelectTrigger>
                 <SelectContent>
@@ -399,7 +399,7 @@ export function ListingsGridClient({ initialData }: ListingsGridClientProps) {
                   })
                 }
               >
-                <SelectTrigger className="h-8 text-xs w-auto min-w-25">
+                <SelectTrigger className="h-8 text-xs w-auto min-w-25 shrink-0">
                   <SelectValue placeholder="Gender" />
                 </SelectTrigger>
                 <SelectContent>
@@ -416,14 +416,14 @@ export function ListingsGridClient({ initialData }: ListingsGridClientProps) {
                   variant="ghost"
                   size="sm"
                   onClick={handleReset}
-                  className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1 px-2"
+                  className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1 px-2 shrink-0"
                 >
                   <X className="h-3 w-3" />
                   Clear
                 </Button>
               )}
 
-              <div className="ml-auto flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                 <span className="text-xs text-muted-foreground whitespace-nowrap">
                   <span className="font-semibold text-foreground">
                     {totalCount}
