@@ -37,8 +37,9 @@ export async function updateSession(request: NextRequest) {
   });
 
   try {
-    const { data } = await supabase.auth.getClaims();
-    const user = data?.claims;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     const pathname = request.nextUrl.pathname;
 
     // Define public paths that anyone can access
@@ -56,7 +57,29 @@ export async function updateSession(request: NextRequest) {
 
     // If user is logged in, handle routing based on user type
     if (user) {
-      const userType = user.user_metadata?.user_type as string | undefined;
+      let userType = user.user_metadata?.user_type as string | undefined;
+
+      if (!userType && !isPublicPath) {
+        const { data: listerProfile } = await supabase
+          .from("lister_profiles")
+          .select("id")
+          .eq("id", user.id)
+          .single();
+
+        if (listerProfile) {
+          userType = "lister";
+        } else {
+          const { data: studentProfile } = await supabase
+            .from("student_profiles")
+            .select("id")
+            .eq("id", user.id)
+            .single();
+
+          if (studentProfile) {
+            userType = "student";
+          }
+        }
+      }
 
       // ============================================
       // STUDENT ROUTES
@@ -66,7 +89,7 @@ export async function updateSession(request: NextRequest) {
         const { data: profile } = await supabase
           .from("student_profiles")
           .select("profile_completed")
-          .eq("id", user.sub)
+          .eq("id", user.id)
           .single();
 
         const isOnboarded = profile?.profile_completed || false;
@@ -108,7 +131,7 @@ export async function updateSession(request: NextRequest) {
         const { data: profile } = await supabase
           .from("lister_profiles")
           .select("id")
-          .eq("id", user.sub)
+          .eq("id", user.id)
           .single();
 
         const hasProfile = !!profile;
