@@ -510,7 +510,7 @@ export function ListingsGridClient({ initialData }: ListingsGridClientProps) {
           ) : (
             <div className="flex flex-col gap-4">
               {isSuggestedView && (
-                <p className="text-xs font-medium  tracking-wide text-muted-foreground px-0.5">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground px-0.5">
                   Suggested
                 </p>
               )}
