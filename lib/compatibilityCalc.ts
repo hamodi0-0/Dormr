@@ -5,21 +5,37 @@ import type {
   CleanlinessScore,
 } from "./types/compatibility";
 
-// Max points per tenant — constant, so we never recompute it
-const MAX_SCORE_PER_TENANT = 110;
+export const COMPATIBILITY_WEIGHTS = {
+  sleep_schedule: 20,
+  cleanliness: 20,
+  noise_level: 15,
+  guests_frequency: 10,
+  smoking: 15,
+  pets: 15,
+  major: 5,
+  hobbies: 10,
+} as const;
+
+export const MAX_SCORE_PER_TENANT = Object.values(COMPATIBILITY_WEIGHTS).reduce(
+  (sum, value) => sum + value,
+  0,
+);
+
+export function normalizeCompatibilityPercentage(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(100, Math.max(0, Math.round(value)));
+}
+
+export function scoreToPercentage(score: number, maxScore: number): number {
+  if (!Number.isFinite(score) || !Number.isFinite(maxScore) || maxScore <= 0)
+    return 0;
+  return normalizeCompatibilityPercentage((score / maxScore) * 100);
+}
 
 function emptyFactorMatch(total: number) {
   return { matches: 0, total, compatible: [] as number[] };
 }
 
-/**
- * Pure function — no side effects, no I/O.
- * O(T × 8) where T = number of tenants.
- *
- * Optimisation: if T === 1, overallScore === tenantMatches[0].score
- * by definition (totalScore / 110 === tenantScore / 110), so no
- * special-casing is needed — the loop naturally produces the same result.
- */
 export function calculateCollectiveCompatibility(
   viewer: TenantCompatibilityProfile,
   tenants: TenantCompatibilityProfile[],
@@ -49,19 +65,22 @@ export function calculateCollectiveCompatibility(
 
     // ── Sleep Schedule (20 pts) ───────────────────────────────────
     if (viewer.sleep_schedule === t.sleep_schedule) {
-      tenantScore += 20;
+      tenantScore += COMPATIBILITY_WEIGHTS.sleep_schedule;
       details.sleep_schedule.matches++;
       details.sleep_schedule.compatible.push(idx);
     } else if (
       viewer.sleep_schedule === "flexible" ||
       t.sleep_schedule === "flexible"
     ) {
-      tenantScore += 10;
+      tenantScore += COMPATIBILITY_WEIGHTS.sleep_schedule / 2;
     }
 
     // ── Cleanliness (20 pts) ──────────────────────────────────────
     const diff = Math.abs(viewer.cleanliness - t.cleanliness);
-    const cleanScore = Math.max(0, 20 - diff * 5);
+    const cleanScore = Math.max(
+      0,
+      COMPATIBILITY_WEIGHTS.cleanliness - diff * 5,
+    );
     tenantScore += cleanScore;
     details.cleanliness.scores.push({
       tenantIndex: idx,
@@ -71,7 +90,7 @@ export function calculateCollectiveCompatibility(
 
     // ── Noise Level (15 pts) ──────────────────────────────────────
     if (viewer.noise_level === t.noise_level) {
-      tenantScore += 15;
+      tenantScore += COMPATIBILITY_WEIGHTS.noise_level;
       details.noise_level.matches++;
       details.noise_level.compatible.push(idx);
     } else if (
@@ -83,30 +102,30 @@ export function calculateCollectiveCompatibility(
 
     // ── Guests Frequency (10 pts) ─────────────────────────────────
     if (viewer.guests_frequency === t.guests_frequency) {
-      tenantScore += 10;
+      tenantScore += COMPATIBILITY_WEIGHTS.guests_frequency;
       details.guests_frequency.matches++;
       details.guests_frequency.compatible.push(idx);
     } else {
-      tenantScore += 5; // partial credit — always some tolerance
+      tenantScore += COMPATIBILITY_WEIGHTS.guests_frequency / 2; // partial credit — always some tolerance
     }
 
     // ── Smoking (15 pts — deal-breaker) ───────────────────────────
     if (viewer.smoking === t.smoking) {
-      tenantScore += 15;
+      tenantScore += COMPATIBILITY_WEIGHTS.smoking;
       details.smoking.matches++;
       details.smoking.compatible.push(idx);
     }
 
     // ── Pets (15 pts — deal-breaker) ──────────────────────────────
     if (viewer.pets === t.pets) {
-      tenantScore += 15;
+      tenantScore += COMPATIBILITY_WEIGHTS.pets;
       details.pets.matches++;
       details.pets.compatible.push(idx);
     }
 
     // ── Major (5 pts) ─────────────────────────────────────────────
     if (viewer.major && t.major && viewer.major === t.major) {
-      tenantScore += 5;
+      tenantScore += COMPATIBILITY_WEIGHTS.major;
       details.major.matches++;
       details.major.compatible.push(idx);
     }
@@ -114,7 +133,10 @@ export function calculateCollectiveCompatibility(
     // ── Shared Hobbies (10 pts, capped) ──────────────────────────
     const tenantHobbies = t.hobbies ?? [];
     const shared = viewerHobbies.filter((h) => tenantHobbies.includes(h));
-    const hobbyScore = Math.min(10, shared.length * 3);
+    const hobbyScore = Math.min(
+      COMPATIBILITY_WEIGHTS.hobbies,
+      shared.length * 3,
+    );
     tenantScore += hobbyScore;
 
     // Accumulate unique shared hobbies across all tenants
@@ -127,7 +149,7 @@ export function calculateCollectiveCompatibility(
     totalScore += tenantScore;
     tenantMatches.push({
       tenantIndex: idx,
-      score: Math.round((tenantScore / MAX_SCORE_PER_TENANT) * 100),
+      score: scoreToPercentage(tenantScore, MAX_SCORE_PER_TENANT),
     });
   }
 
@@ -137,10 +159,7 @@ export function calculateCollectiveCompatibility(
   details.hobbies.totalShared = details.hobbies.shared.length;
 
   const maxPossibleScore = total * MAX_SCORE_PER_TENANT;
-  const overallScore =
-    maxPossibleScore > 0
-      ? Math.round((totalScore / maxPossibleScore) * 100)
-      : 0;
+  const overallScore = scoreToPercentage(totalScore, maxPossibleScore);
 
   return {
     overallScore,
@@ -151,9 +170,17 @@ export function calculateCollectiveCompatibility(
 
 /** Colour tier helpers — used by both badge and section. */
 export function getScoreTier(score: number): "green" | "amber" | "red" {
-  if (score >= 75) return "green";
-  if (score >= 50) return "amber";
+  const normalized = normalizeCompatibilityPercentage(score);
+  if (normalized >= 75) return "green";
+  if (normalized >= 50) return "amber";
   return "red";
+}
+
+export function getScoreLabel(score: number): string {
+  const tier = getScoreTier(score);
+  if (tier === "green") return "Great match";
+  if (tier === "amber") return "Decent match";
+  return "Low match";
 }
 
 export const SCORE_TIER_CLASSES = {

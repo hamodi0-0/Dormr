@@ -24,6 +24,7 @@ import { useStudentProfile } from "@/hooks/use-student-profile";
 import {
   usePublicListingsPage,
   PAGE_SIZE,
+  normalizeFilters,
 } from "@/hooks/use-public-listings-page";
 import type { ListingsPageResult } from "@/hooks/use-public-listings-page";
 import { ListingCard } from "@/components/listings/listing-card";
@@ -145,12 +146,12 @@ export function ListingsGridClient({ initialData }: ListingsGridClientProps) {
 
   const debouncedSearch = useDebounce(searchQuery, 350);
 
-  const filters = {
+  const filters = normalizeFilters({
     search: debouncedSearch,
     roomType,
     maxPrice,
     genderPreference,
-  };
+  });
 
   const { data, isFetching, isPlaceholderData } = usePublicListingsPage(
     page,
@@ -187,13 +188,20 @@ export function ListingsGridClient({ initialData }: ListingsGridClientProps) {
   }
 
   const hasActiveFilters =
-    !!searchQuery || !!roomType || maxPrice !== null || !!genderPreference;
+    !!filters.search ||
+    !!filters.roomType ||
+    filters.maxPrice !== null ||
+    !!filters.genderPreference;
+  const isSuggestedView = page === 1 && !hasActiveFilters;
+  const isOutOfRangePage = totalCount > 0 && listings.length === 0 && page > 1;
+  const showNoSearchResults =
+    !isFetching && listings.length === 0 && filters.search.length > 0;
 
   const activeFilterCount = [
-    searchQuery,
-    roomType,
-    maxPrice !== null ? true : false,
-    genderPreference,
+    filters.search,
+    filters.roomType,
+    filters.maxPrice !== null ? true : false,
+    filters.genderPreference,
   ].filter(Boolean).length;
 
   return (
@@ -225,7 +233,7 @@ export function ListingsGridClient({ initialData }: ListingsGridClientProps) {
             <div className="w-px h-6 bg-border shrink-0" />
 
             <Select
-              value={roomType ?? "all"}
+              value={filters.roomType ?? "all"}
               onValueChange={(v) =>
                 handleFilterChange({
                   roomType: v === "all" ? null : (v as RoomType),
@@ -248,7 +256,9 @@ export function ListingsGridClient({ initialData }: ListingsGridClientProps) {
             </Select>
 
             <Select
-              value={maxPrice !== null ? String(maxPrice) : "any"}
+              value={
+                filters.maxPrice !== null ? String(filters.maxPrice) : "any"
+              }
               onValueChange={(v) =>
                 handleFilterChange({ maxPrice: v === "any" ? null : Number(v) })
               }
@@ -267,7 +277,7 @@ export function ListingsGridClient({ initialData }: ListingsGridClientProps) {
             </Select>
 
             <Select
-              value={genderPreference ?? "any"}
+              value={filters.genderPreference ?? "any"}
               onValueChange={(v) =>
                 handleFilterChange({
                   genderPreference:
@@ -337,7 +347,7 @@ export function ListingsGridClient({ initialData }: ListingsGridClientProps) {
 
             <div className="flex items-center gap-2 flex-wrap">
               <Select
-                value={roomType ?? "all"}
+                value={filters.roomType ?? "all"}
                 onValueChange={(v) =>
                   handleFilterChange({
                     roomType: v === "all" ? null : (v as RoomType),
@@ -358,7 +368,9 @@ export function ListingsGridClient({ initialData }: ListingsGridClientProps) {
               </Select>
 
               <Select
-                value={maxPrice !== null ? String(maxPrice) : "any"}
+                value={
+                  filters.maxPrice !== null ? String(filters.maxPrice) : "any"
+                }
                 onValueChange={(v) =>
                   handleFilterChange({
                     maxPrice: v === "any" ? null : Number(v),
@@ -379,7 +391,7 @@ export function ListingsGridClient({ initialData }: ListingsGridClientProps) {
               </Select>
 
               <Select
-                value={genderPreference ?? "any"}
+                value={filters.genderPreference ?? "any"}
                 onValueChange={(v) =>
                   handleFilterChange({
                     genderPreference:
@@ -453,25 +465,55 @@ export function ListingsGridClient({ initialData }: ListingsGridClientProps) {
                 <CardSkeleton key={i} />
               ))}
             </div>
-          ) : listings.length === 0 ? (
+          ) : isOutOfRangePage ? (
+            <Card className="py-20 text-center mt-4">
+              <CardContent className="flex flex-col items-center gap-3">
+                <p className="font-medium text-foreground">
+                  No listings on this page
+                </p>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  Your current page is out of range for the available results.
+                </p>
+                <Button variant="outline" size="sm" onClick={() => setPage(1)}>
+                  Go to page 1
+                </Button>
+              </CardContent>
+            </Card>
+          ) : showNoSearchResults ? (
             <Card className="py-20 text-center mt-4">
               <CardContent className="flex flex-col items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
                   <Search className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <p className="font-medium text-foreground">
-                  No listings match your filters
+                  No listings match your search
                 </p>
                 <p className="text-sm text-muted-foreground max-w-xs">
-                  Try adjusting your filters or broadening your search
+                  Try a different keyword or clear your search query
                 </p>
                 <Button variant="outline" size="sm" onClick={handleReset}>
-                  Clear Filters
+                  Clear Search
                 </Button>
+              </CardContent>
+            </Card>
+          ) : listings.length === 0 ? (
+            <Card className="py-20 text-center mt-4">
+              <CardContent className="flex flex-col items-center gap-3">
+                <p className="font-medium text-foreground">
+                  No suggested listings yet
+                </p>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  Check back soon or refine your filters to browse more options.
+                </p>
               </CardContent>
             </Card>
           ) : (
             <div className="flex flex-col gap-4">
+              {isSuggestedView && (
+                <p className="text-xs font-medium  tracking-wide text-muted-foreground px-0.5">
+                  Suggested
+                </p>
+              )}
               {listings.map((listing) => (
                 <ListingCard
                   key={listing.id}

@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils";
 import {
   calculateCollectiveCompatibility,
   getScoreTier,
+  getScoreLabel,
+  normalizeCompatibilityPercentage,
   SCORE_TIER_CLASSES,
 } from "@/lib/compatibilityCalc";
 import type { TenantCompatibilityProfile } from "@/lib/types/compatibility";
@@ -80,6 +82,7 @@ interface SegmentedRingProps {
 }
 
 function SegmentedRing({ targetScore, shouldAnimate }: SegmentedRingProps) {
+  const normalizedTarget = normalizeCompatibilityPercentage(targetScore);
   const [displayScore, setDisplayScore] = useState(0);
 
   useEffect(() => {
@@ -93,7 +96,7 @@ function SegmentedRing({ targetScore, shouldAnimate }: SegmentedRingProps) {
       const progress = Math.min((now - startTime) / duration, 1);
       // Cubic ease-out
       const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplayScore(Math.round(eased * targetScore));
+      setDisplayScore(Math.round(eased * normalizedTarget));
       if (progress < 1) {
         rafId = requestAnimationFrame(tick);
       }
@@ -101,9 +104,9 @@ function SegmentedRing({ targetScore, shouldAnimate }: SegmentedRingProps) {
 
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [shouldAnimate, targetScore]);
+  }, [shouldAnimate, normalizedTarget]);
 
-  const tier = getScoreTier(targetScore);
+  const tier = getScoreTier(normalizedTarget);
   const colors = SCORE_TIER_CLASSES[tier];
   const filledSegments = Math.round((displayScore / 100) * TOTAL_SEGMENTS);
 
@@ -455,15 +458,12 @@ export function CompatibilitySection({
   // ── Show compatibility ────────────────────────────────────────────────────
   if (!result) return null;
 
-  const tier = getScoreTier(result.overallScore);
+  const normalizedOverallScore = normalizeCompatibilityPercentage(
+    result.overallScore,
+  );
+  const tier = getScoreTier(normalizedOverallScore);
   const colors = SCORE_TIER_CLASSES[tier];
-
-  const matchLabel =
-    result.overallScore >= 75
-      ? "Great match"
-      : result.overallScore >= 50
-        ? "Decent match"
-        : "Low match";
+  const matchLabel = getScoreLabel(normalizedOverallScore);
 
   return (
     <Card ref={sectionRef}>
@@ -478,7 +478,7 @@ export function CompatibilitySection({
         {/* Score ring + summary */}
         <div className="flex items-center gap-5 sm:gap-6">
           <SegmentedRing
-            targetScore={result.overallScore}
+            targetScore={normalizedOverallScore}
             shouldAnimate={hasAnimated}
           />
           <div className="flex-1 min-w-0">

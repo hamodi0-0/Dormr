@@ -2,7 +2,11 @@
 
 import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getScoreTier, SCORE_TIER_CLASSES } from "@/lib/compatibilityCalc";
+import {
+  getScoreTier,
+  SCORE_TIER_CLASSES,
+  normalizeCompatibilityPercentage,
+} from "@/lib/compatibilityCalc";
 
 interface CompatibilityBadgeProps {
   score: number | null;
@@ -18,7 +22,8 @@ export function CompatibilityBadge({
   // No data → hide completely on browse page
   if (score === null || tenantCount === 0) return null;
 
-  const tier = getScoreTier(score);
+  const normalizedScore = normalizeCompatibilityPercentage(score);
+  const tier = getScoreTier(normalizedScore);
   const colors = SCORE_TIER_CLASSES[tier];
 
   return (
@@ -32,7 +37,7 @@ export function CompatibilityBadge({
     >
       <Sparkles className={cn("h-3.5 w-3.5 shrink-0", colors.text)} />
       <span className={cn("text-sm font-bold tabular-nums", colors.text)}>
-        {score}%
+        {normalizedScore}%
       </span>
       <span className="text-xs text-muted-foreground font-normal">match</span>
     </div>
