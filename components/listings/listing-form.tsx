@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
+import PhoneInput from "react-phone-number-input";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 import {
   Loader2,
   Upload,
@@ -80,6 +82,14 @@ interface PendingImage {
   id: string;
   file: File;
   preview: string;
+}
+
+function normalizePhoneForInput(phone: string | null | undefined): string {
+  const value = phone?.trim();
+  if (!value) return "";
+
+  const parsed = parsePhoneNumberFromString(value, "EG");
+  return parsed?.format("E.164") ?? "";
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -161,6 +171,8 @@ async function removeImageFromStorage(
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ListingForm({ mode, listing }: ListingFormProps) {
+  const initialContactPhone = normalizePhoneForInput(listing?.contact_phone);
+
   const [universityQuery, setUniversityQuery] = useState(
     listing?.university_name ?? "",
   );
@@ -202,7 +214,7 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
           max_occupants: listing.max_occupants,
           address_line: listing.address_line,
           city: listing.city,
-          contact_phone: listing.contact_phone ?? "",
+          contact_phone: initialContactPhone,
           postcode: listing.postcode ?? "",
           country: listing.country,
           gender_preference: listing.gender_preference,
@@ -285,6 +297,16 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
       setGeocodeStatus("success");
     },
     [form],
+  );
+
+  const handleFormKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLFormElement>) => {
+      if (event.key !== "Enter") return;
+      if (event.target instanceof HTMLInputElement) {
+        event.preventDefault();
+      }
+    },
+    [],
   );
 
   // ─── Image Handlers ───────────────────────────────────────────────────────
@@ -385,6 +407,7 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
     const normalised = {
       ...values,
       description: values.description || undefined,
+      contact_phone: values.contact_phone.trim(),
       university_name: values.university_name || undefined,
       postcode: values.postcode || undefined,
     };
@@ -430,7 +453,11 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        onKeyDown={handleFormKeyDown}
+        className="space-y-6"
+      >
         {/* ── 1. Basic Info ──────────────────────────────────────────────── */}
         <Card>
           <CardHeader>
@@ -484,23 +511,23 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                 <FormItem>
                   <FormLabel className="flex items-center gap-1.5">
                     <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                    Contact Phone{" "}
-                    <span className="text-xs text-muted-foreground font-normal">
-                      (optional)
-                    </span>
+                    Contact Phone
                   </FormLabel>
                   <FormControl>
-                    <Input
-                      type="tel"
-                      placeholder="+44 7700 900000"
-                      {...field}
+                    <PhoneInput
+                      international
+                      defaultCountry="EG"
+                      countryCallingCodeEditable={false}
+                      placeholder="e.g. +20 10 1234 5678"
+                      value={field.value || undefined}
+                      onChange={(value) => field.onChange(value ?? "")}
+                      onBlur={field.onBlur}
+                      className="phone-input"
+                      numberInputProps={{
+                        autoComplete: "tel",
+                      }}
                     />
                   </FormControl>
-                  <p className="text-xs text-muted-foreground">
-                    Shown to confirmed tenants only. Use a number specific to
-                    this listing if preferred.
-                  </p>
-                  <FormMessage />
                 </FormItem>
               )}
             />

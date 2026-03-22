@@ -29,7 +29,7 @@ export interface Listing {
   available_from: string;
   min_stay_months: number;
   max_occupants: number;
-  contact_phone: string | null;
+  contact_phone: string;
   address_line: string;
   city: string;
   postcode: string | null;
