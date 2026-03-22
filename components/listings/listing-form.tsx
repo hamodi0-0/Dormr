@@ -177,9 +177,9 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
     listing?.university_name ?? "",
   );
   const [showUniversityDropdown, setShowUniversityDropdown] = useState(false);
+  const [activeUniversityIndex, setActiveUniversityIndex] = useState(-1);
   const { data: universities = [], isLoading: isSearchingUniversities } =
     useUniversitySearch(universityQuery);
-
   const router = useRouter();
   const createMutation = useCreateListingMutation();
   const updateMutation = useUpdateListingMutation();
@@ -895,6 +895,7 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                             setShowUniversityDropdown(
                               e.target.value.length >= 2,
                             );
+                            setActiveUniversityIndex(-1);
                           }}
                           onFocus={() =>
                             universityQuery.length >= 2 &&
@@ -907,11 +908,45 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                             )
                           }
                           onKeyDown={(e) => {
-                            if (e.key === "Enter" && universities.length > 0) {
-                              const first = universities[0].name;
-                              setUniversityQuery(first);
-                              field.onChange(first);
+                            if (e.key === "ArrowDown") {
+                              e.preventDefault();
+                              if (
+                                !showUniversityDropdown &&
+                                universities.length > 0
+                              ) {
+                                setShowUniversityDropdown(true);
+                              }
+                              setActiveUniversityIndex((prev) =>
+                                Math.min(prev + 1, universities.length - 1),
+                              );
+                            }
+
+                            if (e.key === "ArrowUp") {
+                              e.preventDefault();
+                              setActiveUniversityIndex((prev) =>
+                                Math.max(prev - 1, -1),
+                              );
+                            }
+
+                            if (e.key === "Enter") {
+                              if (
+                                showUniversityDropdown &&
+                                activeUniversityIndex >= 0 &&
+                                activeUniversityIndex < universities.length
+                              ) {
+                                e.preventDefault();
+                                const selected =
+                                  universities[activeUniversityIndex].name;
+                                setUniversityQuery(selected);
+                                field.onChange(selected);
+                                setShowUniversityDropdown(false);
+                                setActiveUniversityIndex(-1);
+                              }
+                            }
+
+                            if (e.key === "Escape") {
                               setShowUniversityDropdown(false);
+                              setActiveUniversityIndex(-1);
                             }
                           }}
                         />
@@ -923,12 +958,20 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                             {universities.map((uni, idx) => (
                               <div
                                 key={idx}
-                                className="px-3 py-2 hover:bg-accent rounded-sm cursor-pointer"
+                                className={`px-3 py-2 rounded-sm cursor-pointer ${
+                                  idx === activeUniversityIndex
+                                    ? "bg-accent"
+                                    : "hover:bg-accent"
+                                }`}
+                                onMouseEnter={() =>
+                                  setActiveUniversityIndex(idx)
+                                }
                                 onMouseDown={(e) => {
                                   e.preventDefault();
                                   setUniversityQuery(uni.name);
                                   field.onChange(uni.name);
                                   setShowUniversityDropdown(false);
+                                  setActiveUniversityIndex(-1);
                                 }}
                               >
                                 <div className="text-sm font-medium">
