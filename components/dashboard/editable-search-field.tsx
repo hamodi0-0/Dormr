@@ -40,6 +40,7 @@ export function EditableSearchField({
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(currentValue);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
@@ -60,21 +61,25 @@ export function EditableSearchField({
     setDraft(currentValue);
     setIsEditing(true);
     setShowDropdown(false);
+    setActiveIndex(-1);
   };
 
   const cancel = () => {
     setIsEditing(false);
     setShowDropdown(false);
+    setActiveIndex(-1);
   };
 
   const commit = () => {
     onSave(draft);
     setIsEditing(false);
     setShowDropdown(false);
+    setActiveIndex(-1);
   };
 
   const handleInputChange = (value: string) => {
     setDraft(value);
+    setActiveIndex(-1);
     if (options) {
       setShowDropdown(value.length >= 1);
     } else if (onSearch) {
@@ -86,6 +91,7 @@ export function EditableSearchField({
   const selectOption = (value: string) => {
     setDraft(value);
     setShowDropdown(false);
+    setActiveIndex(-1);
   };
 
   // Local filtering for static options
@@ -99,8 +105,17 @@ export function EditableSearchField({
     ? filteredOptions.map((o) => ({ label: o }))
     : (searchResults ?? []);
 
+  useEffect(() => {
+    if (!showDropdown || dropdownItems.length === 0) {
+      setActiveIndex(-1);
+      return;
+    }
+
+    setActiveIndex((prev) => (prev >= dropdownItems.length ? -1 : prev));
+  }, [showDropdown, dropdownItems.length]);
+
   return (
-    <div className="flex items-start gap-4 py-3.5 border-b border-border/50 last:border-0 min-h-[52px]">
+    <div className="flex items-start gap-4 py-3.5 border-b border-border/50 last:border-0 min-h-13">
       <span className="text-sm text-muted-foreground shrink-0 w-36 pt-1">
         {label}
       </span>
@@ -120,12 +135,43 @@ export function EditableSearchField({
                   if (onSearch && draft.length >= 2) setShowDropdown(true);
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    if (dropdownItems.length > 0)
-                      selectOption(dropdownItems[0].label);
-                    else commit();
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    if (!showDropdown && dropdownItems.length > 0) {
+                      setShowDropdown(true);
+                    }
+                    setActiveIndex((prev) =>
+                      Math.min(prev + 1, dropdownItems.length - 1),
+                    );
                   }
-                  if (e.key === "Escape") cancel();
+
+                  if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setActiveIndex((prev) => Math.max(prev - 1, -1));
+                  }
+
+                  if (e.key === "Enter") {
+                    if (
+                      showDropdown &&
+                      activeIndex >= 0 &&
+                      activeIndex < dropdownItems.length
+                    ) {
+                      e.preventDefault();
+                      selectOption(dropdownItems[activeIndex].label);
+                    } else {
+                      commit();
+                    }
+                  }
+
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    if (showDropdown) {
+                      setShowDropdown(false);
+                      setActiveIndex(-1);
+                    } else {
+                      cancel();
+                    }
+                  }
                 }}
               />
               {isSearching && (
@@ -138,7 +184,10 @@ export function EditableSearchField({
                 {dropdownItems.map((item, idx) => (
                   <div
                     key={idx}
-                    className="px-3 py-2 hover:bg-accent rounded-sm cursor-pointer"
+                    className={`px-3 py-2 rounded-sm cursor-pointer ${
+                      idx === activeIndex ? "bg-accent" : "hover:bg-accent"
+                    }`}
+                    onMouseEnter={() => setActiveIndex(idx)}
                     onMouseDown={(e) => {
                       // prevent input blur before click registers
                       e.preventDefault();
