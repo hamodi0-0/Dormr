@@ -635,7 +635,7 @@ export function ListingDetailClient({
                   disabled
                 >
                   <MessageCircle className="h-4 w-4" />
-                  Message Lister
+                  Dormr Chat
                 </Button>
               </div>
 

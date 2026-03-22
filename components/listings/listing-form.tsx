@@ -24,7 +24,7 @@ import {
   createListingSchema,
   type CreateListingValues,
 } from "@/lib/schemas/listing-schema";
-import { geocodeAddress } from "@/lib/geocoding";
+import { geocodeAddress, reverseGeocodeCoords } from "@/lib/geocoding";
 import { useCreateListingMutation } from "@/hooks/use-create-listing-mutation";
 import { useUpdateListingMutation } from "@/hooks/use-update-listing-mutation";
 import { createClient } from "@/lib/supabase/client";
@@ -291,10 +291,28 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
   // ─── Map location change (click / drag) ──────────────────────────────────
 
   const handleMapLocationChange = useCallback(
-    (lat: number, lng: number) => {
+    async (lat: number, lng: number) => {
       form.setValue("latitude", lat);
       form.setValue("longitude", lng);
       setGeocodeStatus("success");
+
+      // Reverse geocode to auto-fill address fields
+      try {
+        const addressData = await reverseGeocodeCoords(lat, lng);
+        if (addressData) {
+          if (addressData.street) {
+            form.setValue("address_line", addressData.street);
+          }
+          if (addressData.city) {
+            form.setValue("city", addressData.city);
+          }
+          if (addressData.country) {
+            form.setValue("country", addressData.country);
+          }
+        }
+      } catch {
+        // Silently fail — user can manually enter address
+      }
     },
     [form],
   );
@@ -722,7 +740,7 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                     <FormLabel>City</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Manchester"
+                        placeholder="Cairo"
                         {...field}
                         onBlur={handleAddressBlur}
                       />
@@ -745,7 +763,7 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="M1 1AE"
+                        placeholder="11520"
                         {...field}
                         onBlur={handleAddressBlur}
                       />
@@ -762,7 +780,7 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                   <FormItem>
                     <FormLabel>Country</FormLabel>
                     <FormControl>
-                      <Input placeholder="United Kingdom" {...field} />
+                      <Input placeholder="Egypt" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

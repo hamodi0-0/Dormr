@@ -1,111 +1,230 @@
-# Purpose & context
+# Purpose & Context
 
-We are building Dormr, a student housing marketplace (proptech) that matches university students with compatible accommodations. The platform has two user roles — students (tenants who browse listings) and listers (landlords who post rooms) — each with separate dashboard namespaces (/dashboard/ and /lister/), routing, and navigation patterns.
-Core platform features include: listing creation/management, tenant request flows, compatibility scoring between prospective and existing tenants, notifications, and a student profile system. The project is in active multi-phase development, with foundational infrastructure complete and feature layers being added incrementally.
-Tech stack: Next.js (App Router, Turbopack), Supabase (auth, database, storage, RLS), TypeScript, React Query, Zustand, React Hook Form, Zod, shadcn/ui, Tailwind CSS, Leaflet (vanilla, not react-leaflet).
+**Dormr** is a student housing marketplace (proptech) that matches university students with compatible accommodations. Two distinct user roles with separate dashboards:
 
-Current state
+- **Students** (`/dashboard/`): Browse listings, submit tenant requests, manage profiles, view compatibility scores
+- **Listers** (`/lister/`): Post rooms, manage listings, approve/reject tenant requests, view applications
 
-Compatibility system (Phase 5): Fully implemented — scroll-triggered SVG ring animation (IntersectionObserver + requestAnimationFrame, cubic ease-out), per-tenant field-by-field match/mismatch breakdown with actual differing values, four distinct display states (single-occupancy hidden, no tenants message, viewer-is-only-tenant "You're listed here" state, animated score). Compatibility badge on browse page made more visually prominent.
-Browse listings page: Inline sticky filter bar (search, room type, max price, gender preference) embedded directly in listings-browse-client.tsx; horizontal stacked card layout; Zustand store used for filter state (not local useState); pagination and skeleton loading in place.
-Tenant request & notification flow: Full stack implemented — student submits request → lister notified with approve/reject buttons on notifications page → approval adds to listing_tenants → student notified of outcome → removal triggers notification. read_at column on tenant_requests drives unread badge count.
-Lister dashboard: My Listings page, new/edit listing forms, dashboard home with real stats, ListerSidebar, auth/profile guards all in place.
-Student profile: Complete StudentProfile interface with all fields; use-student-profile.ts hook with correct query key and initialData support; inline editing via EditableField, EditableHobbies, EditableSearchField; avatar upload/remove via Supabase Storage.
-Map integration: Vanilla Leaflet with useRef/useEffect lifecycle control, manual \_leaflet_id clearing, next/dynamic with ssr: false for LocationPickerMap.
+Core features: listing CRUD, tenant request→approval→notification flows, real-time compatibility scoring, notifications, student profiles with inline editing.
 
-On the horizon
+**Tech Stack**: Next.js 16.1.6 (App Router, Turbopack), Supabase (auth.users, RLS policies, Storage), React 19, React Query 5, Zustand, React Hook Form, Zod, shadcn/ui, Tailwind 4, vanilla Leaflet (not react-leaflet for Strict Mode compatibility).
 
-Lister-side features flagged as "coming soon": analytics, chats, compatibility insights.
-Student-side: chats, saved listings.
-Contact buttons (Call, Email, WhatsApp) currently disabled with "coming soon" tooltips — future activation planned.
-Subdomain email matching improvement: updating is_email_domain_allowed to support suffix/subdomain matching so only root domains need to be maintained.
-Payment/financial features not yet scoped but acknowledged as a future possibility.
+## Architecture & Data Flow
 
-Key learnings & principles
+**Two-Tier Data Fetching Pattern** (server components → React Query):
 
-Ask before acting: Abu Hamza explicitly praised Claude for asking clarifying questions and requesting current file contents before implementing, rather than guessing. This pattern should be continued consistently.
-Match project conventions: File structure, naming, and patterns should follow what already exists (e.g., types in lib/types/, not new directories; existing hook naming conventions).
-Real fixes over suppressions: Abu Hamza prefers finding genuine solutions rather than suppressing linter errors or using workarounds that mask problems.
-Simplicity over complexity: Pushed back on over-engineering — removed live validation from EditableField, removed optimistic avatar previews in favor of cache invalidation, prefers targeted single-file changes when possible.
-Supabase join quirk: Joined relations return as arrays even for single-row joins; use .map() with Array.isArray guards rather than direct casting.
-React Query initialData: Omitting initialDataUpdatedAt is correct — React Query treats initialData as immediately stale and refetches on mount, which is the desired behavior.
-Two-query pattern for broken Supabase joins: When a FK points to auth.users instead of a public profile table, fetch raw rows first, extract IDs, then batch-fetch profiles with .in() and merge via a Map.
-Leaflet + Next.js: react-leaflet is incompatible with React Strict Mode double-mount and Turbopack HMR; vanilla Leaflet with explicit lifecycle control is the established solution.
-Zustand for filter state: Filter state must live in the Zustand store, not local useState, to survive navigation.
+- **Server Component (initial page load)**: Server components fetch data via `createClient()` (Supabase SSR), pass as `initialData` to client components via props
+- **Client Component (mutations/updates)**: Use React Query hooks with `useQuery` (with `initialData`), mutations via React Query + React Hook Form + Zod
+- **State Management**: Zustand for cross-navigation persistence (filter state, sidebar toggles, auth state) — NOT local `useState`
 
-Approach & patterns
+**File Organization**:
 
-Architecture: Server components fetch data and pass as React Query initialData to client components; mutations use React Query hooks; schemas in lib/schemas/; hooks in hooks/; UI in components/.
-Forms: Server Actions + Zod for simple forms; React Query mutations + React Hook Form + Zod for complex forms needing real-time validation or optimistic updates.
-Output format preference: Plain raw code blocks only — no artifacts, no expandable panels. Complete file replacements preferred over partial diffs.
-Incremental sessions: Work frequently picks up from compacted prior context; Abu Hamza provides current file contents to re-establish state before implementation.
-Design sensibility: Minimal, restrained aesthetic inspired by Anthropic's style — orange accents (oklch values), Lora serif font, grainy SVG texture, hover:scale transitions (not color-change hovers), no gradients or glassmorphism.
-Dead code hygiene: Unused files and components are deleted rather than left in place.
+```
+lib/
+├── types/           # Domain types (listing.ts, compatibility.ts)
+├── schemas/         # Zod schemas (listing-schema.ts, profile-edit-schema.ts)
+├── stores/          # Zustand stores (listing-filters-store.ts, auth-store.ts)
+└── supabase/        # Supabase clients (client.ts for browser, server.ts for RSC)
+hooks/              # React Query + business logic (use-*.ts naming)
+components/
+├── dashboard/       # Student dashboard (profile, listings-browse, notifications)
+├── lister/         # Lister dashboard (my-listings, listing-form)
+└── ui/             # shadcn/ui components
+app/
+├── dashboard/      # Student routes (server layouts for auth guards)
+├── lister/         # Lister routes
+└── actions/        # Server Actions for simple forms (listing-actions.ts)
+```
 
-Tools & resources
+**Supabase Connection Pattern**:
 
-Supabase MCP: Used directly for schema inspection and database analysis during debugging sessions.
-GitHub: Abu Hamza shares file links for Claude to read current state before making changes.
-Key external APIs: Hipolabs university search API (with custom hardcoded entries for institutions not yet in the API, e.g., German International University).
-UI libraries: shadcn/ui (including AlertDialog), Sonner (toasts), Leaflet (vanilla).
-Fonts: Lora (serif, via next/font/google), referenced via --font-lora CSS variable mapped to --font-serif.
+- **Server**: `createClient()` from `@/lib/supabase/server` returns SSR client with cookie management
+- **Client**: `createClient()` from `@/lib/supabase/client` returns browser client
+- **Auth Guard**: Layout.tsx files check `supabase.auth.getUser()` and redirect if unauthorized
 
-# Copilot Instructions
+**Critical Supabase Quirks**:
 
-Do not use "any" types for typescript
-try to use a schadcn component instead of a custom one when its available
-all components should support dark mode
-ensure any design implementation is responsive and mobile friendly
-ensure separation of concerns
-follow this diagram for data fetching and form submission implementation decision
-Need to fetch data?
-├─ Is it initial page load data?
-│ ├─ YES → Server Component
-│ └─ NO → React Query
-│
-├─ Does it change frequently?
-│ ├─ YES → React Query
-│ └─ NO → Server Component
-│
-└─ Do you need optimistic updates?
-├─ YES → React Query
-└─ NO → Server Component with React Query initialData
+1. **Joined relations return as arrays** (even single-row FK joins) → use `.map()` with `Array.isArray()` checks
+2. **Two-query pattern for broken auth.users FK joins**: Fetch listing rows → extract user IDs → batch-fetch profiles with `.in()` → merge via Map
+3. **RLS policies** control data access; always test with different user roles
 
-Need to submit a form?
-├─ Is it a simple form (1-3 fields)?
-│ ├─ YES → Server Action + Zod
-│ └─ NO → React Query Mutation + React Hook Form + Zod
-│
-├─ Do you need real-time validation?
-│ ├─ YES → React Query Mutation + React Hook Form
-│ └─ NO → Server Action
-│
-└─ Do you need optimistic updates?
-├─ YES → React Query Mutation
-└─ NO → Server Action
+## Form & Mutation Patterns
 
-when giving me pages files dont name them "page.tsx" as i cant tell which page.tsx is for what exactly so give them meaninful names, i copy pase the contents anyway so name of files dont matter only contents do
+**Decision Tree**:
 
-from now on send the files as plain text blocks so I can copy manually
-no expandable panels
-no artifacts
-just raw code blocks
+```
+Simple form (1-3 fields)? → Server Action + Zod (/app/actions/*.ts)
+Complex form (4+ fields) or real-time validation needed? → React Query + React Hook Form + Zod
+Need optimistic updates? → Always use React Query
+```
 
-if u find me trying to implement a feature in a way that's not conventional or follow professional standards tell me, and show me the better way
+**Example - Simple Form (Server Action)**:
 
-# For Supabase
+```tsx
+// app/actions/listing-actions.ts
+export async function updateContactPhone(formData: FormData) {
+  const parsed = updateContactPhoneSchema.safeParse({
+    listing_id: formData.get("listing_id"),
+    contact_phone: formData.get("contact_phone"),
+  });
+  if (!parsed.success) return { error: "Invalid data" };
+  // ... Supabase mutation
+  revalidatePath("/lister/listings");
+}
+```
 
-we have two projects one for dev and another for production
+**Example - Complex Form (React Query + React Hook Form)**:
 
-1. Change schema on dev Supabase → test locally
-2. Push feature branch → test on preview URL
-3. Merge to main → dormr.app updates
-4. Apply same schema change to prod Supabase
+```tsx
+// hooks/use-create-listing-mutation.ts
+export function useCreateListingMutation() {
+  return useMutation({
+    mutationFn: (values: CreateListingValues) => createListing(values),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["listings"] }),
+  });
+}
 
-# git feature to production workflow
+// In component: useForm() + React Hook Form + FormField from shadcn/ui
+const form = useForm<CreateListingValues>({
+  resolver: zodResolver(createListingSchema),
+});
+```
 
-- Always branch off `dev`, never off `main`
-- Never push directly to `main` or `dev` — always use feature branches and PRs
-- Test the Vercel preview URL before merging anything
-- Only merge `dev` → `main` when you're confident it's production-ready
-- Delete feature branches after merging to keep things clean
+## Key Implementation Details
+
+**Zustand Filter State** (not useState):
+
+- Filter state lives in `listing-filters-store` (`searchQuery`, `roomType`, `maxPrice`, etc.)
+- Survives navigation, persists across browse→detail→browse
+- Actions: `setSearchQuery()`, `setRoomType()`, `resetFilters()`, etc.
+
+**Compatibility System**:
+
+- Per-listing compatibility score with tenant profiles
+- Scroll-triggered SVG ring animation (IntersectionObserver + requestAnimationFrame)
+- Four states: single-occupancy (hidden), no-tenants message, viewer-is-only-tenant ("You're listed here"), animated score
+- Hook: `use-compatibility.ts` handles fetch + calculation
+
+**Vanilla Leaflet (not react-leaflet)**:
+
+- React Strict Mode double-mount incompatible with react-leaflet
+- Use `useRef` for map instance, `useEffect` for lifecycle, manually clear `_leaflet_id`
+- Dynamic import: `next/dynamic` with `ssr: false` for LocationPickerMap
+- See: `listing-detail-map.tsx`, `listing-form.tsx` (location picker section)
+
+**Notifications & Tenant Requests**:
+
+- Flow: Student submits request → `tenant_requests` row → Lister notified (read_at = null)
+- Lister approves → `listing_tenants` row added → Student notified
+- `read_at` column on `tenant_requests` drives unread badge count
+
+**Student Profile Inline Editing**:
+
+- Components: `EditableField`, `EditableHobbies`, `EditableSearchField` (not live validation)
+- Avatar upload via Supabase Storage, cache invalidation on success
+- Hook: `use-student-profile.ts` handles queries + initialData
+
+## Development Workflow
+
+**Local Development**:
+
+```bash
+npm run dev          # Starts on localhost:3000, Turbopack watch
+npm run build        # Production build
+npm run lint         # ESLint check
+```
+
+**Environment**:
+
+- `.env.local` contains `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY`
+- Dev Supabase project for local testing
+- Production Supabase project synced after main merge
+
+**Git & Deployment Workflow**:
+
+1. Branch off `dev` (never `main`)
+2. Test locally, then push feature branch → Vercel preview auto-generated
+3. Merge to `dev` after preview validation
+4. When ready for production: merge `dev` → `main` (triggers dormr.app deployment)
+5. Apply same DB schema changes to production Supabase manually
+6. Delete feature branch after merge
+
+## Code Quality Standards
+
+**TypeScript**: No `any` types — always provide explicit types. Use type-safe patterns with Zod for validation.
+
+**Components**: All components support dark mode via `next-themes`. Use shadcn/ui components over custom ones when available (Button, Input, Form, Card, AlertDialog, etc.). Ensure mobile responsiveness (test on 320px+ viewport).
+
+**Separation of Concerns**:
+
+- Server components for data fetching and auth guards → client components for UI rendering
+- Hooks for business logic and data queries → components for presentation only
+- Schemas in dedicated files (lib/schemas/), types in lib/types/
+
+**Code Style**:
+
+- Design: Minimal, restrained aesthetic — orange accents (oklch values), Lora serif font, grainy SVG texture, hover:scale transitions (not color-change)
+- No gradients, glassmorphism, or unnecessary animations
+- Hover states should scale, not change color
+
+**Dead Code**: Delete unused files/components immediately — don't leave stale code.
+
+## Common Pitfalls & Solutions
+
+| Issue                          | Wrong                      | Right                                                     |
+| ------------------------------ | -------------------------- | --------------------------------------------------------- |
+| Filter state across navigation | Local `useState`           | Zustamd store (`listing-filters-store`)                   |
+| Map library in Next.js         | `react-leaflet`            | Vanilla Leaflet with `next/dynamic` + `ssr: false`        |
+| Supabase FK join on auth.users | Single query with join     | Two-query: fetch rows → batch-fetch profiles with `.in()` |
+| React Query initialData stale  | Set `initialDataUpdatedAt` | Omit it; React Query refetches on mount (intended)        |
+| Simple form validation         | Custom hooks               | Server Action + Zod (in /app/actions/)                    |
+| Form errors in complex forms   | Toasts for each error      | Render via `<FormMessage>` from React Hook Form           |
+
+## Files to Reference
+
+- `hooks/use-public-listings-page.ts`: Listing query with pagination, filters, tenant profile batching
+- `components/listings/listing-form.tsx`: Complex form with image upload, location picker (Leaflet), React Hook Form
+- `app/dashboard/page.tsx`: Server component with auth guard, initial data fetch pattern
+- `lib/stores/listing-filters-store.ts`: Zustand store example
+- `lib/schemas/listing-schema.ts`: Zod schema organization
+- `hooks/use-student-profile.ts`: React Query with initialData + inline editing
+
+## Approach & Conventions
+
+**Architecture**: Server components fetch data and pass as React Query initialData to client components; mutations use React Query hooks; schemas in lib/schemas/; hooks in hooks/; UI in components/.
+
+**Forms**: Server Actions + Zod for simple forms; React Query mutations + React Hook Form + Zod for complex forms needing real-time validation or optimistic updates.
+
+**Output format**: Plain raw code blocks only — no artifacts, no expandable panels. Complete file replacements preferred over partial diffs. When providing page files, use meaningful content descriptions rather than generic "page.tsx" names.
+
+**Design Sensibility**: Minimal, restrained aesthetic — orange accents (oklch values), Lora serif font, grainy SVG texture, hover:scale transitions (not color-change hovers), no gradients or glassmorphism.
+
+**Code Review**: If you identify a feature being implemented in an unconventional or non-professional way, flag it and show the better approach. Always ask clarifying questions before implementing, and request current file contents before making changes.
+
+**Dead Code Hygiene**: Unused files and components are deleted rather than left in place.
+
+## Tools & Resources
+
+- **Supabase MCP**: Used for schema inspection, database analysis, migrations
+- **Environment**: `.env.local` contains `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY`
+- **External APIs**: Hipolabs university search API (with custom hardcoded entries for unlisted institutions)
+- **UI Libraries**: shadcn/ui, Sonner (toasts), vanilla Leaflet
+- **Fonts**: Lora (serif, via next/font/google, referenced as --font-lora CSS variable)
+
+## Supabase & Deployment Workflow
+
+**Development Environment**:
+
+1. Two Supabase projects: dev (local testing) and production (live app)
+2. Schema changes: Modify dev Supabase schema → test locally (`npm run dev`)
+3. Feature branch: Push to Vercel preview → test on preview URL
+4. Merge & Deploy: `dev` → `main` triggers production Supabase update
+5. **Manual step**: Apply same schema changes to production Supabase after merge
+
+**Git Workflow**:
+
+- Always branch off `dev` (never `main`)
+- Never push directly to `main` or `dev` — use feature branches + PRs
+- Test Vercel preview URL before merging
+- Only merge `dev` → `main` when production-ready
+- Delete feature branches after merge
