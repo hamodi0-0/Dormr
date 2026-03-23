@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 
 export function Footer() {
   const handleNavClick = (
@@ -13,7 +14,7 @@ export function Footer() {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
       history.pushState(null, "", `#${id}`);
     } else {
-      window.location.hash = id;
+      window.location.href = `/#${id}`;
     }
   };
 
@@ -74,52 +75,25 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Support */}
-          <div>
-            <h3 className="font-semibold mb-4 text-sm">Support</h3>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>
-                <a href="#" className="hover:text-foreground transition-colors">
-                  Help Center
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-foreground transition-colors">
-                  Contact Us
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-foreground transition-colors">
-                  FAQ
-                </a>
-              </li>
-            </ul>
-          </div>
-
           {/* Legal */}
           <div>
             <h3 className="font-semibold mb-4 text-sm">Legal</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <a
+                <Link
                   href="/privacy"
                   className="hover:text-foreground transition-colors"
                 >
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="/terms"
                   className="hover:text-foreground transition-colors"
                 >
                   Terms of Service
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-foreground transition-colors">
-                  Cookie Policy
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -127,19 +101,8 @@ export function Footer() {
 
         <div className="border-t mt-8 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground">
-            © 2025 Dormr. All rights reserved.
+            © 2026 Dormr. All rights reserved.
           </p>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <a href="#" className="hover:text-foreground transition-colors">
-              Twitter
-            </a>
-            <a href="#" className="hover:text-foreground transition-colors">
-              Instagram
-            </a>
-            <a href="#" className="hover:text-foreground transition-colors">
-              LinkedIn
-            </a>
-          </div>
         </div>
       </div>
     </footer>

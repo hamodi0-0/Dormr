@@ -45,6 +45,8 @@ export async function updateSession(request: NextRequest) {
     // Define public paths that anyone can access
     const isPublicPath =
       pathname === "/" ||
+      pathname === "/privacy" ||
+      pathname === "/terms" ||
       pathname.startsWith("/auth") ||
       pathname.startsWith("/api");
 
