@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
+import PhoneInput from "react-phone-number-input";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 import {
   Loader2,
   Upload,
@@ -19,10 +21,11 @@ import {
 import { toast } from "sonner";
 
 import {
-  createListingSchema,
   type CreateListingValues,
+  listingFormSchema,
+  type ListingFormValues,
 } from "@/lib/schemas/listing-schema";
-import { geocodeAddress } from "@/lib/geocoding";
+import { geocodeAddress, reverseGeocodeCoords } from "@/lib/geocoding";
 import { useCreateListingMutation } from "@/hooks/use-create-listing-mutation";
 import { useUpdateListingMutation } from "@/hooks/use-update-listing-mutation";
 import { createClient } from "@/lib/supabase/client";
@@ -80,6 +83,14 @@ interface PendingImage {
   id: string;
   file: File;
   preview: string;
+}
+
+function normalizePhoneForInput(phone: string | null | undefined): string {
+  const value = phone?.trim();
+  if (!value) return "";
+
+  const parsed = parsePhoneNumberFromString(value, "EG");
+  return parsed?.format("E.164") ?? "";
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -161,13 +172,15 @@ async function removeImageFromStorage(
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ListingForm({ mode, listing }: ListingFormProps) {
+  const initialContactPhone = normalizePhoneForInput(listing?.contact_phone);
+
   const [universityQuery, setUniversityQuery] = useState(
     listing?.university_name ?? "",
   );
   const [showUniversityDropdown, setShowUniversityDropdown] = useState(false);
+  const [activeUniversityIndex, setActiveUniversityIndex] = useState(-1);
   const { data: universities = [], isLoading: isSearchingUniversities } =
     useUniversitySearch(universityQuery);
-
   const router = useRouter();
   const createMutation = useCreateListingMutation();
   const updateMutation = useUpdateListingMutation();
@@ -182,14 +195,15 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
   const [geocodeStatus, setGeocodeStatus] = useState<
     "idle" | "success" | "failed"
   >("idle");
+  const totalImageCount = existingImages.length + pendingImages.length;
 
   const isSubmitting =
     createMutation.isPending || updateMutation.isPending || isUploadingImages;
 
   // ─── Form ─────────────────────────────────────────────────────────────────
 
-  const form = useForm<CreateListingValues>({
-    resolver: zodResolver(createListingSchema) as Resolver<CreateListingValues>,
+  const form = useForm<ListingFormValues>({
+    resolver: zodResolver(listingFormSchema) as Resolver<ListingFormValues>,
     defaultValues: listing
       ? {
           title: listing.title,
@@ -202,7 +216,7 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
           max_occupants: listing.max_occupants,
           address_line: listing.address_line,
           city: listing.city,
-          contact_phone: listing.contact_phone ?? "",
+          contact_phone: initialContactPhone,
           postcode: listing.postcode ?? "",
           country: listing.country,
           gender_preference: listing.gender_preference,
@@ -215,6 +229,7 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
           furnished: listing.furnished,
           latitude: listing.latitude ?? undefined,
           longitude: listing.longitude ?? undefined,
+          image_count: listing.listing_images?.length ?? 0,
         }
       : {
           title: "",
@@ -229,7 +244,7 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
           city: "",
           contact_phone: "",
           postcode: "",
-          country: "United Kingdom",
+          country: "Egypt",
           gender_preference: "no_preference",
           university_name: "",
           wifi: false,
@@ -238,8 +253,16 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
           gym: false,
           bills_included: false,
           furnished: true,
+          image_count: 0,
         },
   });
+
+  useEffect(() => {
+    form.setValue("image_count", totalImageCount);
+    if (totalImageCount >= 3) {
+      form.clearErrors("image_count");
+    }
+  }, [form, totalImageCount]);
 
   // Watch lat/lng so the map reacts to geocoding results
   const latitude = form.watch("latitude");
@@ -279,12 +302,40 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
   // ─── Map location change (click / drag) ──────────────────────────────────
 
   const handleMapLocationChange = useCallback(
-    (lat: number, lng: number) => {
+    async (lat: number, lng: number) => {
       form.setValue("latitude", lat);
       form.setValue("longitude", lng);
       setGeocodeStatus("success");
+
+      // Reverse geocode to auto-fill address fields
+      try {
+        const addressData = await reverseGeocodeCoords(lat, lng);
+        if (addressData) {
+          if (addressData.street) {
+            form.setValue("address_line", addressData.street);
+          }
+          if (addressData.city) {
+            form.setValue("city", addressData.city);
+          }
+          if (addressData.country) {
+            form.setValue("country", addressData.country);
+          }
+        }
+      } catch {
+        // Silently fail — user can manually enter address
+      }
     },
     [form],
+  );
+
+  const handleFormKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLFormElement>) => {
+      if (event.key !== "Enter") return;
+      if (event.target instanceof HTMLInputElement) {
+        event.preventDefault();
+      }
+    },
+    [],
   );
 
   // ─── Image Handlers ───────────────────────────────────────────────────────
@@ -365,28 +416,43 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
 
   // ─── Submit ───────────────────────────────────────────────────────────────
 
-  const onSubmit = async (values: CreateListingValues) => {
+  const onSubmit = async (values: ListingFormValues) => {
+    const { image_count, ...listingValues } = values;
+
+    if (image_count < 3) {
+      form.setError("image_count", {
+        type: "manual",
+        message: "You must upload atleast 3 images",
+      });
+      return;
+    }
+
     // Geocode silently on submit if no coords yet
-    if (!values.latitude || !values.longitude) {
+    if (!listingValues.latitude || !listingValues.longitude) {
       try {
-        const query = [values.address_line, values.city, values.postcode]
+        const query = [
+          listingValues.address_line,
+          listingValues.city,
+          listingValues.postcode,
+        ]
           .filter(Boolean)
           .join(", ");
         const coords = await geocodeAddress(query);
         if (coords) {
-          values.latitude = coords.lat;
-          values.longitude = coords.lng;
+          listingValues.latitude = coords.lat;
+          listingValues.longitude = coords.lng;
         }
       } catch {
         // intentionally swallowed
       }
     }
 
-    const normalised = {
-      ...values,
-      description: values.description || undefined,
-      university_name: values.university_name || undefined,
-      postcode: values.postcode || undefined,
+    const normalised: CreateListingValues = {
+      ...listingValues,
+      description: listingValues.description || undefined,
+      contact_phone: listingValues.contact_phone.trim(),
+      university_name: listingValues.university_name || undefined,
+      postcode: listingValues.postcode || undefined,
     };
 
     if (mode === "create") {
@@ -430,7 +496,11 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        onKeyDown={handleFormKeyDown}
+        className="space-y-6"
+      >
         {/* ── 1. Basic Info ──────────────────────────────────────────────── */}
         <Card>
           <CardHeader>
@@ -484,23 +554,23 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                 <FormItem>
                   <FormLabel className="flex items-center gap-1.5">
                     <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                    Contact Phone{" "}
-                    <span className="text-xs text-muted-foreground font-normal">
-                      (optional)
-                    </span>
+                    Contact Phone
                   </FormLabel>
                   <FormControl>
-                    <Input
-                      type="tel"
-                      placeholder="+44 7700 900000"
-                      {...field}
+                    <PhoneInput
+                      international
+                      defaultCountry="EG"
+                      countryCallingCodeEditable={false}
+                      placeholder="e.g. +20 10 1234 5678"
+                      value={field.value || undefined}
+                      onChange={(value) => field.onChange(value ?? "")}
+                      onBlur={field.onBlur}
+                      className="phone-input"
+                      numberInputProps={{
+                        autoComplete: "tel",
+                      }}
                     />
                   </FormControl>
-                  <p className="text-xs text-muted-foreground">
-                    Shown to confirmed tenants only. Use a number specific to
-                    this listing if preferred.
-                  </p>
-                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -695,7 +765,7 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                     <FormLabel>City</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Manchester"
+                        placeholder="Cairo"
                         {...field}
                         onBlur={handleAddressBlur}
                       />
@@ -718,7 +788,7 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="M1 1AE"
+                        placeholder="11520"
                         {...field}
                         onBlur={handleAddressBlur}
                       />
@@ -735,7 +805,7 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                   <FormItem>
                     <FormLabel>Country</FormLabel>
                     <FormControl>
-                      <Input placeholder="United Kingdom" {...field} />
+                      <Input placeholder="Egypt" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -850,6 +920,7 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                             setShowUniversityDropdown(
                               e.target.value.length >= 2,
                             );
+                            setActiveUniversityIndex(-1);
                           }}
                           onFocus={() =>
                             universityQuery.length >= 2 &&
@@ -862,11 +933,45 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                             )
                           }
                           onKeyDown={(e) => {
-                            if (e.key === "Enter" && universities.length > 0) {
-                              const first = universities[0].name;
-                              setUniversityQuery(first);
-                              field.onChange(first);
+                            if (e.key === "ArrowDown") {
+                              e.preventDefault();
+                              if (
+                                !showUniversityDropdown &&
+                                universities.length > 0
+                              ) {
+                                setShowUniversityDropdown(true);
+                              }
+                              setActiveUniversityIndex((prev) =>
+                                Math.min(prev + 1, universities.length - 1),
+                              );
+                            }
+
+                            if (e.key === "ArrowUp") {
+                              e.preventDefault();
+                              setActiveUniversityIndex((prev) =>
+                                Math.max(prev - 1, -1),
+                              );
+                            }
+
+                            if (e.key === "Enter") {
+                              if (
+                                showUniversityDropdown &&
+                                activeUniversityIndex >= 0 &&
+                                activeUniversityIndex < universities.length
+                              ) {
+                                e.preventDefault();
+                                const selected =
+                                  universities[activeUniversityIndex].name;
+                                setUniversityQuery(selected);
+                                field.onChange(selected);
+                                setShowUniversityDropdown(false);
+                                setActiveUniversityIndex(-1);
+                              }
+                            }
+
+                            if (e.key === "Escape") {
                               setShowUniversityDropdown(false);
+                              setActiveUniversityIndex(-1);
                             }
                           }}
                         />
@@ -878,12 +983,20 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
                             {universities.map((uni, idx) => (
                               <div
                                 key={idx}
-                                className="px-3 py-2 hover:bg-accent rounded-sm cursor-pointer"
+                                className={`px-3 py-2 rounded-sm cursor-pointer ${
+                                  idx === activeUniversityIndex
+                                    ? "bg-accent"
+                                    : "hover:bg-accent"
+                                }`}
+                                onMouseEnter={() =>
+                                  setActiveUniversityIndex(idx)
+                                }
                                 onMouseDown={(e) => {
                                   e.preventDefault();
                                   setUniversityQuery(uni.name);
                                   field.onChange(uni.name);
                                   setShowUniversityDropdown(false);
+                                  setActiveUniversityIndex(-1);
                                 }}
                               >
                                 <div className="text-sm font-medium">
@@ -1042,6 +1155,12 @@ export function ListingForm({ mode, listing }: ListingFormProps) {
               <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <ImageIcon className="h-3.5 w-3.5 shrink-0" />
                 The first photo you upload will be used as the cover image.
+              </p>
+            )}
+
+            {form.formState.errors.image_count?.message && (
+              <p className="text-sm font-medium text-destructive">
+                {form.formState.errors.image_count.message}
               </p>
             )}
           </CardContent>

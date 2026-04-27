@@ -33,8 +33,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 import type { Listing, ListingImage } from "@/lib/types/listing";
 import {
   ROOM_TYPE_LABELS,
@@ -82,6 +94,19 @@ const AMENITY_CONFIG = [
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }[];
+
+function getDialablePhone(phone: string): string | null {
+  const parsed = parsePhoneNumberFromString(phone, "EG");
+  if (parsed) return parsed.number;
+
+  const cleaned = phone.replace(/[^\d+]/g, "").trim();
+  return cleaned.length > 0 ? cleaned : null;
+}
+
+function formatPhoneDisplay(phone: string): string {
+  const parsed = parsePhoneNumberFromString(phone, "EG");
+  return parsed?.formatInternational() ?? phone;
+}
 
 // ─── Image Gallery ────────────────────────────────────────────────────────────
 
@@ -250,6 +275,7 @@ export function ListingDetailClient({
 }: ListingDetailClientProps) {
   const { data: viewerProfile } = useStudentProfile();
   const [descExpanded, setDescExpanded] = useState(false);
+  const [callConfirmOpen, setCallConfirmOpen] = useState(false);
 
   const images = listing.listing_images ?? [];
   const priceSuffix = BILLING_PERIOD_SUFFIX[listing.billing_period] ?? "/mo";
@@ -262,6 +288,10 @@ export function ListingDetailClient({
   const activeAmenities = AMENITY_CONFIG.filter(
     ({ key }) => listing[key] === true,
   );
+
+  const dialablePhone = getDialablePhone(listing.contact_phone);
+  const callHref = dialablePhone ? `tel:${dialablePhone}` : null;
+  const formattedPhone = formatPhoneDisplay(listing.contact_phone);
 
   const fullAddress = [
     listing.address_line,
@@ -552,26 +582,62 @@ export function ListingDetailClient({
               <div className="border-t border-border/50" />
 
               <div className="space-y-2.5">
-                <Button
-                  className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground h-10"
-                  disabled
-                >
-                  <Phone className="h-4 w-4" />
-                  Call Lister
-                </Button>
+                {callHref ? (
+                  <AlertDialog
+                    open={callConfirmOpen}
+                    onOpenChange={setCallConfirmOpen}
+                  >
+                    <AlertDialogTrigger asChild>
+                      <Button className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground h-10">
+                        <Phone className="h-4 w-4" />
+                        Call Lister
+                      </Button>
+                    </AlertDialogTrigger>
+
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          Are you sure you want to call this number?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          You are about to call{" "}
+                          <strong>{formattedPhone}</strong>.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => {
+                            if (typeof window !== "undefined") {
+                              window.location.href = callHref;
+                            }
+                          }}
+                          aria-label={`Confirm call to ${formattedPhone}`}
+                        >
+                          Yes, call now
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                ) : (
+                  <Button
+                    className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground h-10"
+                    disabled
+                  >
+                    <Phone className="h-4 w-4" />
+                    Call Lister
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   className="w-full gap-2 h-10"
                   disabled
                 >
                   <MessageCircle className="h-4 w-4" />
-                  Message Lister
+                  Dormr Chat
                 </Button>
               </div>
-
-              <p className="text-center text-xs text-muted-foreground bg-muted/50 rounded-md py-2 px-3">
-                Direct contact coming soon. Check back shortly!
-              </p>
 
               <div className="space-y-2 pt-1">
                 {[

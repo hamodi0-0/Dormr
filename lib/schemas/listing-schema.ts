@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidPhoneNumber } from "react-phone-number-input";
 
 export const createListingSchema = z.object({
   // Basic info
@@ -31,8 +32,14 @@ export const createListingSchema = z.object({
     .min(1, "Must allow at least 1 occupant")
     .default(1),
 
-  // Contact — per-listing, optional
-  contact_phone: z.string().max(30).optional(),
+  // Contact — per-listing, required
+  contact_phone: z
+    .string()
+    .trim()
+    .min(1, "Contact phone is required")
+    .refine((value) => isValidPhoneNumber(value), {
+      message: "Please enter a valid phone number",
+    }),
 
   // Location
   address_line: z.string().min(3, "Please enter a street address"),
@@ -59,4 +66,9 @@ export const createListingSchema = z.object({
   furnished: z.boolean().default(false),
 });
 
+export const listingFormSchema = createListingSchema.extend({
+  image_count: z.number().int().min(3, "You must upload atleast 3 images"),
+});
+
 export type CreateListingValues = z.infer<typeof createListingSchema>;
+export type ListingFormValues = z.infer<typeof listingFormSchema>;

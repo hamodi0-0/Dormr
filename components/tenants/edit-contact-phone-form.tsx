@@ -3,7 +3,8 @@
 import { useTransition, useState } from "react";
 import { toast } from "sonner";
 import { Pencil, Check, X, Loader2, Phone } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import PhoneInput from "react-phone-number-input";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { Button } from "@/components/ui/button";
 import { updateContactPhone } from "@/app/actions/listing-actions";
 
@@ -12,25 +13,41 @@ interface EditContactPhoneFormProps {
   currentPhone: string;
 }
 
+function normalizePhoneForInput(phone: string | null | undefined): string {
+  const value = phone?.trim();
+  if (!value) return "";
+
+  const parsed = parsePhoneNumberFromString(value, "EG");
+  return parsed?.format("E.164") ?? "";
+}
+
 export function EditContactPhoneForm({
   listingId,
   currentPhone,
 }: EditContactPhoneFormProps) {
+  const initialPhone = normalizePhoneForInput(currentPhone);
+
   const [editing, setEditing] = useState(false);
-  const [saved, setSaved] = useState(currentPhone);
-  const [draft, setDraft] = useState(currentPhone);
+  const [saved, setSaved] = useState(initialPhone);
+  const [draft, setDraft] = useState(initialPhone);
   const [isPending, startTransition] = useTransition();
+  const trimmedDraft = draft.trim();
 
   const handleSave = () => {
+    if (!trimmedDraft) {
+      toast.error("Contact phone is required");
+      return;
+    }
+
     startTransition(async () => {
       const formData = new FormData();
       formData.set("listing_id", listingId);
-      formData.set("contact_phone", draft.trim());
+      formData.set("contact_phone", trimmedDraft);
       const result = await updateContactPhone(formData);
       if (result.error) {
         toast.error(result.error);
       } else {
-        setSaved(draft.trim());
+        setSaved(trimmedDraft);
         setEditing(false);
         toast.success("Contact phone updated");
       }
@@ -70,24 +87,28 @@ export function EditContactPhoneForm({
 
   return (
     <div className="flex items-center gap-2">
-      <Input
-        type="tel"
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        placeholder="+44 7700 900000"
-        className="h-9 flex-1 text-sm"
+      <PhoneInput
+        international
+        defaultCountry="EG"
+        countryCallingCodeEditable={false}
+        value={draft || undefined}
+        onChange={(value) => setDraft(value ?? "")}
+        placeholder="e.g. +20 10 1234 5678"
+        className="phone-input phone-input-sm flex-1"
         disabled={isPending}
-        autoFocus
-        onKeyDown={(e) => {
-          if (e.key === "Enter") handleSave();
-          if (e.key === "Escape") handleCancel();
+        numberInputProps={{
+          autoFocus: true,
+          onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === "Enter") handleSave();
+            if (e.key === "Escape") handleCancel();
+          },
         }}
       />
       <Button
         size="icon"
         className="h-9 w-9 shrink-0"
         onClick={handleSave}
-        disabled={isPending}
+        disabled={isPending || !trimmedDraft}
         aria-label="Save phone number"
       >
         {isPending ? (

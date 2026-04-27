@@ -14,7 +14,7 @@ export function ListerLayoutClient({
     <div
       className={cn(
         "flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out",
-        isOpen ? "ml-64" : "ml-16",
+        isOpen ? "md:ml-64" : "md:ml-16",
       )}
     >
       {children}

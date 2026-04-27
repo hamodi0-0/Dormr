@@ -21,7 +21,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { NotificationBell } from "@/components/notifications/notifications-bell";
 import { useStudentUnreadCount } from "@/hooks/use-notifications";
 import { useStudentProfile } from "@/hooks/use-student-profile";
@@ -39,7 +38,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -228,9 +226,8 @@ export function StudentNavHeader() {
           <NotificationBell
             href="/dashboard/notifications"
             count={unreadCount}
+            className="hidden md:inline-flex"
           />
-
-          <ThemeToggle />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -298,10 +295,10 @@ export function StudentNavHeader() {
       {/* Mobile Drawer */}
       <aside
         className={cn(
-          "fixed top-0 left-0 z-50 h-full w-72 bg-background border-r border-border shadow-2xl",
+          "fixed top-0 right-0 z-50 h-full w-72 bg-background border-l border-border shadow-2xl",
           "flex flex-col",
           "transition-transform duration-300 ease-in-out md:hidden",
-          mobileOpen ? "translate-x-0" : "-translate-x-full",
+          mobileOpen ? "translate-x-0" : "translate-x-full",
         )}
         aria-modal="true"
         role="dialog"
@@ -313,8 +310,13 @@ export function StudentNavHeader() {
             className="flex items-center gap-2.5"
             onClick={() => setMobileOpen(false)}
           >
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <Building2 className="h-4 w-4 text-primary-foreground" />
+            <div className=" bg-primary rounded-lg h-8 w-8 flex items-center mr-2 justify-center shrink-0">
+              <Image
+                src="/images/transparent-logo.png"
+                alt="Dormr Logo"
+                width={36}
+                height={36}
+              />
             </div>
             <span className="font-serif font-medium text-foreground text-3xl">
               Dormr
@@ -424,17 +426,6 @@ export function StudentNavHeader() {
             )}
             {isSwitchingToLister ? "Redirecting…" : "Continue with Google"}
           </Button>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setSwitchDialogOpen(false)}
-              disabled={isSwitchingToLister}
-            >
-              Cancel
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

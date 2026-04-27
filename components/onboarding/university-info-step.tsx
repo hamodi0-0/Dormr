@@ -34,6 +34,7 @@ export function UniversityInfoStep() {
   const [majorSearchQuery, setMajorSearchQuery] = useState(data.major || "");
   const [showUniversities, setShowUniversities] = useState(false);
   const [showMajors, setShowMajors] = useState(false);
+  const [activeUniversityIndex, setActiveUniversityIndex] = useState(-1);
   const [queryInput, setQueryInput] = useState("");
 
   const { data: universities = [], isLoading } =
@@ -64,6 +65,7 @@ export function UniversityInfoStep() {
   const handleUniversitySearch = (value: string) => {
     setSearchQuery(value);
     setQueryInput(value);
+    setActiveUniversityIndex(-1);
     if (value.length >= 2) {
       setShowUniversities(true);
     } else {
@@ -75,6 +77,7 @@ export function UniversityInfoStep() {
     setSearchQuery(universityName);
     form.setValue("university_name", universityName);
     setShowUniversities(false);
+    setActiveUniversityIndex(-1);
   };
 
   return (
@@ -95,14 +98,50 @@ export function UniversityInfoStep() {
                       handleUniversitySearch(e.target.value);
                       field.onChange(e.target.value);
                     }}
-                    // if user clicks enter the first university in the list should be selected
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" && universities.length > 0) {
-                        selectUniversity(universities[0].name);
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        if (!showUniversities && universities.length > 0) {
+                          setShowUniversities(true);
+                        }
+                        setActiveUniversityIndex((prev) =>
+                          Math.min(prev + 1, universities.length - 1),
+                        );
+                      }
+
+                      if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        setActiveUniversityIndex((prev) =>
+                          Math.max(prev - 1, -1),
+                        );
+                      }
+
+                      if (e.key === "Enter") {
+                        if (
+                          showUniversities &&
+                          activeUniversityIndex >= 0 &&
+                          activeUniversityIndex < universities.length
+                        ) {
+                          e.preventDefault();
+                          selectUniversity(
+                            universities[activeUniversityIndex].name,
+                          );
+                        }
+                      }
+
+                      if (e.key === "Escape") {
+                        setShowUniversities(false);
+                        setActiveUniversityIndex(-1);
                       }
                     }}
                     onFocus={() =>
                       searchQuery.length >= 2 && setShowUniversities(true)
+                    }
+                    onBlur={() =>
+                      setTimeout(() => {
+                        setShowUniversities(false);
+                        setActiveUniversityIndex(-1);
+                      }, 150)
                     }
                   />
                   {isLoading && (
@@ -113,8 +152,16 @@ export function UniversityInfoStep() {
                       {universities.map((uni, idx) => (
                         <div
                           key={idx}
-                          className="px-3 py-2 hover:bg-accent rounded-sm cursor-pointer text-sm"
-                          onClick={() => selectUniversity(uni.name)}
+                          className={`px-3 py-2 rounded-sm cursor-pointer text-sm ${
+                            idx === activeUniversityIndex
+                              ? "bg-accent"
+                              : "hover:bg-accent"
+                          }`}
+                          onMouseEnter={() => setActiveUniversityIndex(idx)}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            selectUniversity(uni.name);
+                          }}
                         >
                           <div className="font-medium">{uni.name}</div>
                           <div className="text-xs text-muted-foreground">
