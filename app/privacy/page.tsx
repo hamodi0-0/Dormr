@@ -54,7 +54,7 @@ export default function PrivacyPage() {
               <h2 className="text-xl font-semibold mb-2">4. Contact</h2>
               <p>
                 For privacy requests or questions, contact us at
-                support@dormr.app.
+                moh.hamza.contactme@gmail.com.
               </p>
             </section>
           </div>

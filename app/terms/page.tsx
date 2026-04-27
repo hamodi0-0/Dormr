@@ -54,7 +54,10 @@ export default function TermsPage() {
 
             <section>
               <h2 className="text-xl font-semibold mb-2">4. Contact</h2>
-              <p>For legal questions, contact us at support@dormr.app.</p>
+              <p>
+                For legal questions, contact us at
+                moh.hamza.contactme@gmail.com.
+              </p>
             </section>
           </div>
         </section>
