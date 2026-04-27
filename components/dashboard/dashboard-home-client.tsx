@@ -69,17 +69,11 @@ export function DashboardHomeClient({
               {yearLabel} · {profile!.major} · {profile!.university_name}
             </p>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 self-start">
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
-            <span className="text-xs font-medium text-primary">
-              Compatibility Matching — Coming Soon
-            </span>
-          </div>
         </div>
       </div>
 
       {/* ── Search Card ───────────────────────────────────────────────── */}
-      <Card className="mb-10 py-0 border-primary/20 shadow-sm">
+      <Card className="mb-10 py-0 shadow-sm">
         <CardContent className="p-5 sm:p-6">
           <h2 className="text-base font-semibold text-foreground mb-1 flex items-center gap-2">
             <Search className="h-4 w-4 text-primary" />
